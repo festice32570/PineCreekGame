@@ -1,16 +1,23 @@
 # Build Guide
 
-## GitHub Actionsでビルド
+## 普通に遊ぶだけなら
 
-この方法が最も簡単です。
+GitHubの **Releases** から最新のAPKをダウンロードしてください。
+
+```text
+PineCreek-v0.6.0.apk
+```
+
+APKをAndroidで開けばインストールできます。
+
+## GitHub Actionsでビルド
 
 1. リポジトリをforkまたはclone
 2. 変更をpush
 3. GitHubの **Actions** を開く
 4. **Build Pine Creek APK** を開く
 5. 緑のチェックになるまで待つ
-6. 実行画面の **Artifacts** からAPK ZIPを取得
-7. ZIP内の `app-debug.apk` をAndroidへインストール
+6. 実行画面の **Artifacts** からAPKを取得
 
 Workflow:
 
@@ -20,7 +27,34 @@ Workflow:
 
 push時に自動実行されます。
 
-## ローカルビルド
+## CIで自動確認する内容
+
+- Java 17
+- `VehiclePhysicsSelfTest`
+- Android SDK 35
+- 安定したdebug署名鍵
+- Gradle build
+- `apksigner verify`
+- `aapt dump badging`
+- package名 `com.pinecreek.game`
+- APK artifact
+
+## 車両物理テストだけ実行
+
+JDK 17があればAndroid SDKなしで実行できます。
+
+```bash
+rm -rf build/physics-test
+mkdir -p build/physics-test
+
+javac -d build/physics-test \
+  app/src/main/java/com/pinecreek/game/VehiclePhysics.java \
+  tools/VehiclePhysicsSelfTest.java
+
+java -cp build/physics-test com.pinecreek.game.VehiclePhysicsSelfTest
+```
+
+## ローカルAndroidビルド
 
 必要なもの:
 
@@ -29,21 +63,9 @@ push時に自動実行されます。
 - Android Build Tools 35.0.0
 - Gradle 8.11.1
 
-Android SDKのライセンスを承認:
-
 ```bash
 sdkmanager --licenses
-```
-
-必要なSDK:
-
-```bash
 sdkmanager "platforms;android-35" "build-tools;35.0.0"
-```
-
-ビルド:
-
-```bash
 gradle --no-daemon :app:assembleDebug
 ```
 
@@ -62,19 +84,18 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## よくある問題
 
+### 旧版から更新できない
+
+v0.5以前のGitHub Actions製debug APKは、runnerごとにdebug署名が異なっていた可能性があります。
+
+v0.6以降はActions cacheでdebug keystoreを維持します。
+v0.5以前から一度だけ更新に失敗する場合は、旧版をアンインストールしてからv0.6を入れてください。
+
 ### sdkmanagerでpackageが見つからない
 
 古い `tools` packageを明示的に入れないでください。
-現在のWorkflowはrunnerにあるcmdline-toolsの `sdkmanager` を直接利用します。
+Workflowはrunnerのcmdline-toolsにある `sdkmanager` を直接利用します。
 
 ### Javaバージョン
 
 AGP 8.9系ではJDK 17を使用してください。
-
-### APKが見つからない
-
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-を確認してください。
