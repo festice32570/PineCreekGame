@@ -96,6 +96,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private float safeHeading = 0f;
     private float safeUpdateTimer = 0f;
     private float cameraHeading = 0f;
+    private float cameraAnchorX = 0f;
+    private float cameraAnchorZ = 22f;
     private boolean cameraReady = false;
     private float viewAspect = 1.7778f;
 
@@ -186,6 +188,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         safeZ = pz;
         safeHeading = heading;
         cameraHeading = heading;
+        cameraAnchorX = px;
+        cameraAnchorZ = pz;
         cameraReady = true;
         fuel = 100f;
         gameplay = true;
@@ -226,6 +230,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         safeZ = pz;
         safeHeading = heading;
         cameraHeading = heading;
+        cameraAnchorX = px;
+        cameraAnchorZ = pz;
         cameraReady = true;
         fuel = Math.max(0f, Math.min(100f, savedFuel));
         gameplay = true;
@@ -277,6 +283,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         signedSpeed = 0f;
         steeringAngle = 0f;
         cameraHeading = heading;
+        cameraAnchorX = px;
+        cameraAnchorZ = pz;
         cameraReady = true;
         listener.onDialogue("車内",
                 "道路へ復帰。パイン・クリークでは『何もなかったことにする』のも重要な運転技術だ。");
@@ -360,30 +368,59 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 
         if (gameplay) {
             float speedAbs = Math.abs(signedSpeed);
-            float fov = 58f + Math.min(8f, speedAbs * .34f);
+            float fov = 57.5f + Math.min(7.5f, speedAbs * .30f);
             Matrix.perspectiveM(projection,0,fov,viewAspect,.12f,560f);
 
             if (!cameraReady) {
                 cameraHeading = heading;
+                cameraAnchorX = px;
+                cameraAnchorZ = pz;
                 cameraReady = true;
             }
 
-            // Chase-camera dead zone:
-            // Steering first moves/rotates the truck inside the frame. The camera
-            // does NOT immediately rotate with every steering input.
+            // Heading has a large dead-zone while steering. The truck turns first;
+            // the world/camera catches up afterwards.
             cameraHeading = ChaseCameraMath.updateHeading(
                     heading, cameraHeading, steeringAngle, speedAbs, dt);
 
-            float camBack = 12.6f + Math.min(4.4f,speedAbs*.18f);
-            float camX = px - (float)Math.sin(cameraHeading)*camBack;
-            float camZ = pz + (float)Math.cos(cameraHeading)*camBack;
+            float forwardX = (float)Math.sin(cameraHeading);
+            float forwardZ = -(float)Math.cos(cameraHeading);
+            float rightX = (float)Math.cos(cameraHeading);
+            float rightZ = (float)Math.sin(cameraHeading);
 
-            // Important: look direction follows CAMERA heading, not vehicle heading.
-            // This is what lets the truck visibly travel left/right across the screen
-            // before the camera catches up, like a normal third-person racer.
-            float lookAhead = 6.2f + speedAbs*.07f;
-            float lookX = px + (float)Math.sin(cameraHeading)*lookAhead;
-            float lookZ = pz - (float)Math.cos(cameraHeading)*lookAhead;
+            // Decouple camera POSITION from the truck as well as its heading.
+            // Longitudinal movement is followed quickly, lateral movement slowly.
+            // This lets the truck visibly travel left/right in the display instead
+            // of being magnetically pinned to screen centre.
+            float dx = px - cameraAnchorX;
+            float dz = pz - cameraAnchorZ;
+            float forwardError = dx * forwardX + dz * forwardZ;
+            float lateralError = dx * rightX + dz * rightZ;
+
+            float forwardFollow = 1f - (float)Math.exp(-dt * (6.0f + speedAbs * .035f));
+            float lateralRate = 1.25f + speedAbs * .010f;
+            if (Math.abs(steeringAngle) > Math.toRadians(1.5)) {
+                lateralRate *= .58f;
+            }
+            // Do not let the vehicle disappear off-screen; once it reaches a
+            // comfortable visual offset, the camera starts catching up faster.
+            if (Math.abs(lateralError) > 3.8f) {
+                lateralRate = Math.max(lateralRate, 3.6f);
+            }
+            float lateralFollow = 1f - (float)Math.exp(-dt * lateralRate);
+
+            cameraAnchorX += forwardX * forwardError * forwardFollow
+                    + rightX * lateralError * lateralFollow;
+            cameraAnchorZ += forwardZ * forwardError * forwardFollow
+                    + rightZ * lateralError * lateralFollow;
+
+            float camBack = 12.9f + Math.min(4.1f,speedAbs*.16f);
+            float camX = cameraAnchorX - forwardX * camBack;
+            float camZ = cameraAnchorZ - forwardZ * camBack;
+
+            float lookAhead = 6.5f + speedAbs*.065f;
+            float lookX = cameraAnchorX + forwardX * lookAhead;
+            float lookZ = cameraAnchorZ + forwardZ * lookAhead;
             Matrix.setLookAtM(view,0,camX,6.15f,camZ,lookX,1.45f,lookZ,0,1,0);
         } else {
             Matrix.perspectiveM(projection,0,63f,viewAspect,.12f,560f);
