@@ -26,9 +26,25 @@ jobs:
         run: |
           rm -rf build/logic-test
           mkdir -p build/logic-test
-          javac -d build/logic-test             app/src/main/java/com/pinecreek/game/VehiclePhysics.java             app/src/main/java/com/pinecreek/game/ChaseCameraMath.java             tools/VehiclePhysicsSelfTest.java             tools/ChaseCameraMathSelfTest.java
+          javac -d build/logic-test \
+            app/src/main/java/com/pinecreek/game/VehiclePhysics.java \
+            app/src/main/java/com/pinecreek/game/ChaseCameraMath.java \
+            tools/VehiclePhysicsSelfTest.java \
+            tools/ChaseCameraMathSelfTest.java
           java -cp build/logic-test com.pinecreek.game.VehiclePhysicsSelfTest
           java -cp build/logic-test com.pinecreek.game.ChaseCameraMathSelfTest
+
+      - name: Verify source artwork files
+        shell: bash
+        run: |
+          test -f app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg
+          test -f app/src/main/res/drawable-nodpi/pine_creek_icon.png
+          test -f docs/pine_creek_keyart.jpg
+          test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg)" -gt 50000
+          test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_icon.png)" -gt 50000
+          echo "ec0db16bf10c9132eb0a981c13d08902e1da1ea2e5208d68e279ef40f2426e13  app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg" | sha256sum -c -
+          echo "a3a242055026b6b5ba71edd6107c66e85ab566cee1531f7be8a979d18943c67f  app/src/main/res/drawable-nodpi/pine_creek_icon.png" | sha256sum -c -
+          cmp app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg docs/pine_creek_keyart.jpg
 
       - name: Android SDK 35
         shell: bash
@@ -49,7 +65,15 @@ jobs:
         run: |
           mkdir -p "$HOME/.android"
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair               -keystore "$HOME/.android/debug.keystore"               -storepass android               -alias androiddebugkey               -keypass android               -dname "CN=Pine Creek Debug,O=Pine Creek,C=US"               -keyalg RSA               -keysize 2048               -validity 10000
+            keytool -genkeypair \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Pine Creek Debug,O=Pine Creek,C=US" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
           fi
 
       - name: Gradle 8.11.1
@@ -60,7 +84,7 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Verify APK, package and key art
+      - name: Verify APK, package and embedded artwork
         shell: bash
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
@@ -68,18 +92,30 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee build/apk-badging.txt
           grep -q "package: name='com.pinecreek.game'" build/apk-badging.txt
-          grep -q "versionCode='7'" build/apk-badging.txt
-          grep -q "versionName='0.6.1'" build/apk-badging.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -q "pine_creek_keyart"
-          cp "$APK" PineCreek-v0.6.1.apk
-          cp docs/pine_creek_keyart.jpg pine-creek-keyart.jpg
+          grep -q "versionCode='8'" build/apk-badging.txt
+          grep -q "versionName='0.6.2'" build/apk-badging.txt
+
+          KEYART_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_keyart\.jpg$' | head -n 1)"
+          ICON_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_icon\.png$' | head -n 1)"
+          test -n "$KEYART_ENTRY"
+          test -n "$ICON_ENTRY"
+
+          EXPECTED_KEYART="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg | awk '{print $1}')"
+          EXPECTED_ICON="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_icon.png | awk '{print $1}')"
+          APK_KEYART="$(unzip -p "$APK" "$KEYART_ENTRY" | sha256sum | awk '{print $1}')"
+          APK_ICON="$(unzip -p "$APK" "$ICON_ENTRY" | sha256sum | awk '{print $1}')"
+          test "$EXPECTED_KEYART" = "$APK_KEYART"
+          test "$EXPECTED_ICON" = "$APK_ICON"
+
+          cp "$APK" PineCreek-v0.6.2.apk
+          cp docs/pine_creek_release.jpg pine-creek-keyart.jpg
 
       - name: Upload CI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PineCreekGame-v061-debug
+          name: PineCreekGame-v062-debug
           path: |
-            PineCreek-v0.6.1.apk
+            PineCreek-v0.6.2.apk
             pine-creek-keyart.jpg
           if-no-files-found: error
           retention-days: 30
@@ -89,13 +125,18 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v0.6.1
-          APK: PineCreek-v0.6.1.apk
+          TAG: v0.6.2
+          APK: PineCreek-v0.6.2.apk
           KEYART: pine-creek-keyart.jpg
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK" "$KEYART" --clobber
-            gh release edit "$TAG"               --title "Pine Creek v0.6.1 - Camera & Key Art Fix"               --notes-file RELEASE_NOTES.md
+            gh release edit "$TAG" \
+              --title "Pine Creek v0.6.2 - Artwork Display Fix" \
+              --notes-file RELEASE_NOTES.md
           else
-            gh release create "$TAG" "$APK" "$KEYART"               --target "$GITHUB_SHA"               --title "Pine Creek v0.6.1 - Camera & Key Art Fix"               --notes-file RELEASE_NOTES.md
+            gh release create "$TAG" "$APK" "$KEYART" \
+              --target "$GITHUB_SHA" \
+              --title "Pine Creek v0.6.2 - Artwork Display Fix" \
+              --notes-file RELEASE_NOTES.md
           fi
