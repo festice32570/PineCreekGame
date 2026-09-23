@@ -1,50 +1,20 @@
-# Pine Creek Game v0.1
+# Pine Creek: 冬の町 v0.4
 
-Android向けの軽量ゲーム試作です。外部ゲームエンジンや外部アセットは使わず、Android標準APIだけで動きます。
+雪に埋もれた架空の田舎町「Pine Creek」で、古い架空のピックアップを走らせるAndroid向け3Dゲームです。
 
-## GitHubでAPKを作る
+## v0.4
+- タイトル画面 / ニューゲーム / 続きから / 遊び方
+- SharedPreferencesによる進行保存
+- OpenGL ES 2.0の実3Dワールド
+- 交差点、雪原、建物、木、街灯、住民、駐車車両
+- 圧雪路と深雪で変わる簡易グリップ
+- 車両の速度、燃料、エンジン音
+- 端末上でリアルタイム合成するBGM・風音・エンジン音・警笛・効果音
+- 9段階のストーリー進行と最終エンディング
+- 食堂のメアリー、町長、給油所のボブ、ジム、七面鳥ケビン
+- 巨大BBQ、埋まった除雪車、バッテリー救援、「走れば車だ」中古車店、17台目のトラック、町役場の七面鳥、雪嵐の最終配達
+- ランダムな町内放送とPine Creekの日常ネタ
 
-1. このZIPを解凍します。
-2. GitHubで空のリポジトリを作ります。
-3. **このフォルダの中身をそのままリポジトリ直下へアップロード**します。
-4. Commitします。
-5. GitHubの `Actions` → `Build Android APK` を開きます。
-6. pushで自動実行されます。必要なら `Run workflow` を押してください。
-7. 緑のチェックになったら、その実行画面下部の `Artifacts` から `PineCreekGame-debug-apk` をダウンロードします。
-8. ArtifactのZIPを解凍すると `app-debug.apk` が入っています。
+このゲームは架空の町・人物・車両のみを使用しています。実在の個人情報や所有物をゲーム設定に使用していません。
 
-## 正しい配置
-
-```text
-リポジトリ直下/
-├─ .github/
-│  └─ workflows/
-│     └─ build-apk.yml
-├─ app/
-├─ build.gradle
-├─ gradle.properties
-├─ settings.gradle
-└─ README.md
-```
-
-`PineCreekGame_v01/PineCreekGame_v01/app` のような二重フォルダにはしないでください。
-
-## 内容
-
-- 横画面
-- 雪の町を走る簡易疑似3Dドライブゲーム
-- 架空のピックアップ
-- タッチ操作（左右／アクセル／ブレーキ）
-- 日本語ミッション表示
-- オフライン
-- 通信権限なし
-
-## ビルド構成
-
-- Android Gradle Plugin 8.9.2
-- Gradle 8.11.1
-- Java 17
-- compileSdk / targetSdk 35
-- minSdk 23
-
-GitHub Actions側でAndroid SDKとGradleを準備するため、ローカルPCにAndroid StudioがなくてもAPKを生成できます。
+GitHub Actionsの Build Pine Creek APK がpush時にAPKを生成します。
