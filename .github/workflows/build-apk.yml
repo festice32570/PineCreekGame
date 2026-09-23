@@ -38,13 +38,15 @@ jobs:
         shell: bash
         run: |
           test -f app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg
-          test -f app/src/main/res/drawable-nodpi/pine_creek_icon.png
           test -f docs/pine_creek_keyart.jpg
-          test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg)" -gt 50000
-          test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_icon.png)" -gt 50000
-          echo "ec0db16bf10c9132eb0a981c13d08902e1da1ea2e5208d68e279ef40f2426e13  app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg" | sha256sum -c -
-          echo "a3a242055026b6b5ba71edd6107c66e85ab566cee1531f7be8a979d18943c67f  app/src/main/res/drawable-nodpi/pine_creek_icon.png" | sha256sum -c -
+          test -f docs/pine_creek_release.jpg
+          test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg)" -eq 14156
+          file app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg | tee build/keyart-file.txt
+          grep -q "JPEG image data" build/keyart-file.txt
+          grep -q "256x256" build/keyart-file.txt
+          echo "54badc9d9efd5576d00befd0a788ce19b42941c94bb816662ce70164923ef0bf  app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg" | sha256sum -c -
           cmp app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg docs/pine_creek_keyart.jpg
+          cmp app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg docs/pine_creek_release.jpg
 
       - name: Android SDK 35
         shell: bash
@@ -96,16 +98,15 @@ jobs:
           grep -q "versionName='0.6.2'" build/apk-badging.txt
 
           KEYART_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_keyart\.jpg$' | head -n 1)"
-          ICON_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_icon\.png$' | head -n 1)"
           test -n "$KEYART_ENTRY"
-          test -n "$ICON_ENTRY"
 
           EXPECTED_KEYART="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg | awk '{print $1}')"
-          EXPECTED_ICON="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_icon.png | awk '{print $1}')"
-          APK_KEYART="$(unzip -p "$APK" "$KEYART_ENTRY" | sha256sum | awk '{print $1}')"
-          APK_ICON="$(unzip -p "$APK" "$ICON_ENTRY" | sha256sum | awk '{print $1}')"
+          unzip -p "$APK" "$KEYART_ENTRY" > build/apk-pine-creek-keyart.jpg
+          APK_KEYART="$(sha256sum build/apk-pine-creek-keyart.jpg | awk '{print $1}')"
           test "$EXPECTED_KEYART" = "$APK_KEYART"
-          test "$EXPECTED_ICON" = "$APK_ICON"
+          file build/apk-pine-creek-keyart.jpg | tee build/apk-keyart-file.txt
+          grep -q "JPEG image data" build/apk-keyart-file.txt
+          grep -q "256x256" build/apk-keyart-file.txt
 
           cp "$APK" PineCreek-v0.6.2.apk
           cp docs/pine_creek_release.jpg pine-creek-keyart.jpg
