@@ -122,11 +122,13 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         rightPad.setOrientation(LinearLayout.HORIZONTAL);
 
         Button action = gameButton("アクション");
+        Button reset = gameButton("復帰");
         Button reverse = gameButton("バック");
         Button brake = gameButton("ブレーキ");
         Button accel = gameButton("アクセル");
 
         rightPad.addView(action);
+        rightPad.addView(reset);
         rightPad.addView(reverse);
         rightPad.addView(brake);
         rightPad.addView(accel);
@@ -146,6 +148,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
             game.renderer.honk();
         });
         action.setOnClickListener(v -> game.renderer.action());
+        reset.setOnClickListener(v -> game.renderer.resetVehicle());
 
         leftPad.setVisibility(View.GONE);
         rightPad.setVisibility(View.GONE);
@@ -191,7 +194,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         free.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_FREE));
         how.setOnClickListener(v -> Toast.makeText(
                 this,
-                "左・右：ハンドル\nアクセル：前進　バック：後退\nブレーキ：減速・停止\n黄色い印でアクション\n雪原は滑りやすく、速度も落ちます。\n警笛は住民と七面鳥に効きます。",
+                "左・右：ハンドル\nアクセル：前進　バック：後退\nブレーキ：減速・停止\n復帰：最後に安全だった道路へ戻る\n黄色い印でアクション\n雪原は滑りやすく、速度も落ちます。\n警笛は住民と七面鳥に効きます。",
                 Toast.LENGTH_LONG).show());
 
         continueButton.setEnabled(prefs.getBoolean("has_save", false));
