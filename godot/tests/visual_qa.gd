@@ -52,17 +52,58 @@ func _run() -> void:
 
     # QA then follows the same title -> game-start path as the real game.
     main._start_game()
-    await physics_frame
+    var car: PineVehicle = main.vehicle
+    var chase: PineChaseCamera = main.chase
+    var spawn_y := car.global_position.y
+    for i in range(24):
+        await physics_frame
+    _check(absf(car.global_position.y - spawn_y) < 0.20,
+        "spawn settles on the road without a visible drop")
     _check(main.pause_button.visible, "pause button appears during gameplay")
     main._open_pause()
     _check(main.pause_layer.visible and paused, "pause menu freezes gameplay")
     main._resume_game()
     _check(not paused and not main.pause_layer.visible, "resume closes pause menu")
-    main.set_physics_process(false)
 
-    var car: PineVehicle = main.vehicle
-    var chase: PineChaseCamera = main.chase
     var out := "/home/festice/ChatGPT-dev/PineCreekGame/godot/build"
+
+    # Destination marker must be a roadside parking bay, not the building center.
+    var first_target: Vector3 = main.story.get_current_target_position()
+    _check(absf(first_target.x + 6.25) < 0.01 and absf(first_target.z - 18.0) < 0.01,
+        "first mission target is on the roadside parking bay")
+    _check(main.mission_marker.get_child_count() >= 6,
+        "mission marker contains a visible parking rectangle and pointer")
+    main._teleport_vehicle(Transform3D(Basis.IDENTITY, Vector3(0,0.62,18)))
+    for i in range(12):
+        await physics_frame
+    await _capture(out + "/qa-mission-parking.png")
+
+    # The touch reset signal must always rescue to the nearest road centerline.
+    car.freeze = true
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(20,0.62,20))
+    car.freeze = false
+    main.touch.reset_requested.emit()
+    await physics_frame
+    _check(absf(car.global_position.x) < 0.12 and absf(car.global_position.z - 20.0) < 0.25,
+        "reset button rescues an off-road vehicle to the main road")
+
+    car.freeze = true
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(20,0.62,-30))
+    car.freeze = false
+    main._reset_vehicle_to_road()
+    await physics_frame
+    _check(absf(car.global_position.z + 24.0) < 0.25 and absf(car.global_position.x - 20.0) < 0.25,
+        "rescue chooses the cross road when it is nearer")
+
+    car.freeze = true
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(8,-5.0,10))
+    car.freeze = false
+    main._physics_process(0.016)
+    await physics_frame
+    _check(car.global_position.y > 0.35 and absf(car.global_position.x) < 0.15,
+        "falling below the world automatically rescues to a road")
+
+    main.set_physics_process(false)
 
     # Straight acceleration.
     car.set_controls(0.0,1.0,0.0,0.0)

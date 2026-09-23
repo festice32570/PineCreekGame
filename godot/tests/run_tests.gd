@@ -141,18 +141,29 @@ func _run() -> void:
     story.stage_index = 1
     story.stage_timer = 0.01
     story.set_process(false)
+    var timed_target := story.get_current_target_position()
+    check(absf(timed_target.x - 6.25) < 0.01 and absf(timed_target.z - 49.0) < 0.01,
+        "building mission target is converted to a roadside parking bay")
     car.freeze = true
     car.global_position = Vector3.ZERO
     story._process(0.05)
     check(story.stage_index == 1 and story.stage_timer > 40.0,
         "timed mission restarts after timeout")
 
-    car.global_position = Vector3(12,0.62,49)
+    car.global_position = Vector3(6.25,0.62,49)
     story.stage_timer = 20.0
     story._process(0.01)
     check(story.episode_index == 9 and story.stage_index == 0,
         "reaching timed destination advances to next episode")
     check(story.episodes.size() >= 24, "campaign contains at least 24 crazy town episodes")
+
+    story.start_campaign(0)
+    var action_target := story.get_current_target_position()
+    car.global_position = Vector3(action_target.x,0.62,action_target.z)
+    story.on_action()
+    check(story.episode_index == 0 and story.stage_index == 1,
+        "action inside the roadside parking bay advances the mission")
+
     story.start_campaign(12)
     check(story.episode_index == 12 and story.stage_index == 0, "story selector can start an arbitrary episode")
     check(story.get_episode_title(12).contains("ケビン"), "story selector exposes episode titles")

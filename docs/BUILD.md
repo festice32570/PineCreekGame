@@ -51,6 +51,9 @@ godot --headless --path . --script res://tests/run_tests.gd
 - 車体後方へのバック
 - デジタルステアが瞬時にフルロックしないこと
 - 左操作で左、右操作で右へ曲がること
+- 後退時の左舵で逆向きヨーが発生すること
+- 建物ミッション座標が道路脇の駐車枠へ変換されること
+- 駐車枠内のアクションでミッションが進むこと
 - 左右応答が極端に非対称でないこと
 
 ## 4. Zorin/Linux上の実描画QA
@@ -61,9 +64,15 @@ godot --headless --path . --script res://tests/run_tests.gd
 
 このスクリプトはテスト後、X11/Xwayland上でゲームを実描画して、
 
+- ストーリー選択
+- 黄色いミッション駐車枠
+- 開始時の車高安定
+- 復帰ボタンによる縦道路 / 横道路救出
+- 地面下落下からの自動救出
 - 直進
 - 左旋回
 - バック
+- 後退左操舵
 - タイトル画面
 
 を `godot/build/*.png` へ保存します。
@@ -99,8 +108,8 @@ export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=your-secret
 生成物:
 
 ```text
-godot/build/PineCreek-Godot-v0.8.0-alpha1.apk
-godot/build/PineCreek-Godot-v0.8.0-alpha1.apk.sha256
+godot/build/PineCreek-Godot-v0.8.1-alpha1.apk
+godot/build/PineCreek-Godot-v0.8.1-alpha1.apk.sha256
 godot/build/apk-manifest-summary.txt
 ```
 

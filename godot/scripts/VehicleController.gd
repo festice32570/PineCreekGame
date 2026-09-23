@@ -213,9 +213,13 @@ func _animate_wheel_air(key: String, steer_angle: float, delta: float, body_spee
     _animate_wheel(key, SUSPENSION_REST + SUSPENSION_DROOP, steer_angle, body_speed, delta)
 
 func reset_to_safe() -> void:
+    freeze = true
     sleeping = true
-    global_transform = last_safe_transform.translated(Vector3(0.0, 0.45, 0.0))
+    global_transform = last_safe_transform
     linear_velocity = Vector3.ZERO
     angular_velocity = Vector3.ZERO
     steering_state = 0.0
+    set_controls(0.0,0.0,1.0,0.0)
+    reset_physics_interpolation()
     sleeping = false
+    freeze = false

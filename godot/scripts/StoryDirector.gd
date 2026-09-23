@@ -305,8 +305,8 @@ func _process(delta: float) -> void:
     var stage := _stage()
     if stage.is_empty():
         return
-    var pos: Vector3 = stage["pos"]
-    marker_changed.emit(pos + Vector3.UP * 0.20, true)
+    var pos := get_current_target_position()
+    marker_changed.emit(pos, true)
 
     if stage.get("mode","action") == "timed":
         stage_timer -= delta
@@ -361,15 +361,27 @@ func _can_interact() -> bool:
         return false
     return true
 
+func get_current_target_position() -> Vector3:
+    var stage := _stage()
+    if stage.is_empty():
+        return Vector3.ZERO
+    var p: Vector3 = stage["pos"]
+    # Story data points at the building itself. Gameplay targets are roadside
+    # parking bays, so the player never has to push against a collision wall.
+    if absf(p.x) >= 10.0:
+        p.x = signf(p.x) * 6.25
+    p.y = 0.085
+    return p
+
 func _near_target() -> bool:
     if vehicle == null:
         return false
     var stage := _stage()
     if stage.is_empty():
         return false
-    var p: Vector3 = stage["pos"]
+    var p := get_current_target_position()
     var delta := Vector2(vehicle.global_position.x - p.x, vehicle.global_position.z - p.z)
-    return delta.length() <= 5.5
+    return delta.length() <= 4.5
 
 func _complete_stage() -> void:
     var stage := _stage()
@@ -405,7 +417,7 @@ func _announce_stage(first: bool) -> void:
         _last_timer_second = -1
 
     objective_changed.emit(ep["title"], objective_text)
-    marker_changed.emit(Vector3(stage["pos"]) + Vector3.UP * 0.20,true)
+    marker_changed.emit(get_current_target_position(),true)
     if first:
         dialogue_requested.emit("無線","Pine Creekへようこそ。道路が白いなら、たぶんそこが道路だ。")
 

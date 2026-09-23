@@ -39,6 +39,8 @@ godot --headless --path . --script res://tests/run_tests.gd
 - 後退時に左舵で逆向きヨーが発生すること
 - 左右の応答が極端に非対称にならないこと
 - 24話の任意エピソード開始
+- 建物ミッション座標が道路脇の駐車枠へ変換されること
+- 駐車枠内のアクションでミッションが進むこと
 - BGM/エンジン/スキッドWAVのインポート
 
 ## ローカルQA
@@ -47,7 +49,7 @@ godot --headless --path . --script res://tests/run_tests.gd
 ./tools/qa_native.sh
 ```
 
-Zorin上で実際に3D描画し、ストーリー選択 / 直進 / 左旋回 / バック / 後退左操舵 / タイトル画面をPNGへ保存します。
+Zorin上で実際に3D描画し、ストーリー選択 / 黄色い駐車枠 / スポーン安定 / 道路復帰 / 落下救出 / 直進 / 左旋回 / バック / 後退左操舵 / タイトル画面をPNGへ保存します。
 
 ## Android APK
 
@@ -59,7 +61,7 @@ Zorin上で実際に3D描画し、ストーリー選択 / 直進 / 左旋回 / �
 
 生成物:
 
-`build/PineCreek-Godot-v0.8.0-alpha1.apk`
+`build/PineCreek-Godot-v0.8.1-alpha1.apk`
 
 ## 3Dモデル
 

@@ -1,5 +1,8 @@
 extends Node3D
 
+const ROAD_RESCUE_Y := 0.62
+const START_POINT := Vector3(0.0, ROAD_RESCUE_Y, 22.0)
+
 var vehicle: PineVehicle
 var vehicle_audio: PineVehicleAudio
 var game_audio: PineGameAudio
@@ -451,7 +454,8 @@ func _make_snowman(pos: Vector3, scale_factor: float) -> void:
 func _build_vehicle() -> void:
     vehicle = PineVehicle.new()
     vehicle.name = "PlayerPickup"
-    vehicle.position = Vector3(0,0.60,22)
+    vehicle.freeze = true
+    vehicle.position = START_POINT
     add_child(vehicle)
 
     vehicle_audio = PineVehicleAudio.new()
@@ -474,7 +478,7 @@ func _build_ui() -> void:
     touch = PineTouchControls.new()
     layer.add_child(touch)
     touch.camera_dragged.connect(chase.add_orbit_drag)
-    touch.reset_requested.connect(vehicle.reset_to_safe)
+    touch.reset_requested.connect(_reset_vehicle_to_road)
     touch.visible = false
 
     hud = Label.new()
@@ -563,26 +567,67 @@ func _build_story() -> void:
     mission_marker = Node3D.new()
     mission_marker.name = "MissionMarker"
     mission_marker.visible = false
-    var beacon := MeshInstance3D.new()
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = 0.18
-    mesh.bottom_radius = 0.42
-    mesh.height = 2.6
-    beacon.mesh = mesh
-    beacon.position.y = 1.5
-    var mat := StandardMaterial3D.new()
-    mat.albedo_color = Color("#ffd45a")
-    mat.emission_enabled = true
-    mat.emission = Color("#ffb52e")
-    mat.emission_energy_multiplier = 2.0
-    beacon.material_override = mat
-    mission_marker.add_child(beacon)
+
+    var marker_mat := StandardMaterial3D.new()
+    marker_mat.albedo_color = Color("#ffd34f")
+    marker_mat.emission_enabled = true
+    marker_mat.emission = Color("#ffb52e")
+    marker_mat.emission_energy_multiplier = 2.4
+    marker_mat.roughness = 0.72
+
+    var fill_mat := StandardMaterial3D.new()
+    fill_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    fill_mat.albedo_color = Color(1.0,0.72,0.12,0.24)
+    fill_mat.emission_enabled = true
+    fill_mat.emission = Color("#ffb52e")
+    fill_mat.emission_energy_multiplier = 0.75
+    fill_mat.roughness = 0.82
+
+    var parking_fill := MeshInstance3D.new()
+    var fill_mesh := BoxMesh.new()
+    fill_mesh.size = Vector3(3.46,0.012,6.32)
+    parking_fill.mesh = fill_mesh
+    parking_fill.position = Vector3(0,0.012,0)
+    parking_fill.material_override = fill_mat
+    mission_marker.add_child(parking_fill)
+
+    # Roadside destination is drawn as a real parking bay instead of a beacon
+    # placed inside the destination building.
+    for x in [-1.7, 1.7]:
+        var side := MeshInstance3D.new()
+        var side_mesh := BoxMesh.new()
+        side_mesh.size = Vector3(0.22,0.035,6.4)
+        side.mesh = side_mesh
+        side.position = Vector3(float(x),0.025,0)
+        side.material_override = marker_mat
+        mission_marker.add_child(side)
+    for z in [-3.2, 3.2]:
+        var end_line := MeshInstance3D.new()
+        var end_mesh := BoxMesh.new()
+        end_mesh.size = Vector3(3.62,0.035,0.22)
+        end_line.mesh = end_mesh
+        end_line.position = Vector3(0,0.025,float(z))
+        end_line.material_override = marker_mat
+        mission_marker.add_child(end_line)
+
+    var arrow := MeshInstance3D.new()
+    var arrow_mesh := CylinderMesh.new()
+    arrow_mesh.top_radius = 0.0
+    arrow_mesh.bottom_radius = 0.46
+    arrow_mesh.height = 0.92
+    arrow.mesh = arrow_mesh
+    arrow.rotation_degrees.x = 180.0
+    arrow.position = Vector3(0,2.15,0)
+    arrow.material_override = marker_mat
+    mission_marker.add_child(arrow)
+
     var label := Label3D.new()
-    label.text = "目的地"
-    label.font_size = 38
+    label.text = "目的地\n黄色い駐車枠"
+    label.font_size = 34
     label.outline_size = 8
-    label.position = Vector3(0,3.25,0)
+    label.position = Vector3(0,3.35,0)
     label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     mission_marker.add_child(label)
     add_child(mission_marker)
 
@@ -655,7 +700,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.0 alpha  •  24ストーリー / オリジナルBGM・効果音 / ポーズメニュー"
+    note.text = "v0.8.1 alpha  •  駐車枠ミッション / 道路復帰修正 / 24ストーリー"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -793,14 +838,48 @@ func _set_game_ui_visible(visible_now: bool) -> void:
     if not visible_now:
         dialogue_label.visible = false
 
-func _reset_vehicle_for_story() -> void:
+func _teleport_vehicle(target_transform: Transform3D) -> void:
     vehicle.freeze = true
-    vehicle.global_transform = Transform3D(Basis.IDENTITY, Vector3(0,0.60,22))
+    vehicle.sleeping = true
+    vehicle.global_transform = target_transform
     vehicle.linear_velocity = Vector3.ZERO
     vehicle.angular_velocity = Vector3.ZERO
     vehicle.steering_state = 0.0
-    vehicle.last_safe_transform = vehicle.global_transform
+    vehicle.set_controls(0.0,0.0,1.0,0.0)
+    vehicle.last_safe_transform = target_transform
+    vehicle._safe_timer = 0.0
+    vehicle.reset_physics_interpolation()
+    vehicle.sleeping = false
     vehicle.freeze = false
+
+    if chase != null:
+        chase.follow_yaw = vehicle.global_rotation.y
+        chase.orbit_yaw = 0.0
+        var forward := vehicle.global_transform.basis.z.normalized()
+        chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
+
+func _nearest_road_rescue_transform(from_pos: Vector3) -> Transform3D:
+    var main_point := Vector3(0.0, ROAD_RESCUE_Y, clampf(from_pos.z,-68.0,68.0))
+    var cross_point := Vector3(clampf(from_pos.x,-24.0,24.0), ROAD_RESCUE_Y, -24.0)
+
+    var main_distance := Vector2(from_pos.x - main_point.x, from_pos.z - main_point.z).length()
+    var cross_distance := Vector2(from_pos.x - cross_point.x, from_pos.z - cross_point.z).length()
+
+    if cross_distance + 0.5 < main_distance:
+        return Transform3D(Basis(Vector3.UP, PI * 0.5), cross_point)
+    return Transform3D(Basis.IDENTITY, main_point)
+
+func _reset_vehicle_to_road() -> void:
+    if vehicle == null:
+        return
+    _teleport_vehicle(_nearest_road_rescue_transform(vehicle.global_position))
+    if game_audio != null:
+        game_audio.click()
+    if game_started:
+        _on_dialogue_requested("無線","復帰完了。最寄りの道路へ戻した。")
+
+func _reset_vehicle_for_story() -> void:
+    _teleport_vehicle(Transform3D(Basis.IDENTITY, START_POINT))
 
 func _start_selected_episode(index: int) -> void:
     if game_audio != null:
@@ -876,6 +955,12 @@ func _physics_process(_delta: float) -> void:
     if not game_started:
         vehicle.set_controls(0.0,0.0,1.0,0.0)
         return
+
+    # Falling through the world should never strand the player.
+    if vehicle.global_position.y < -3.0:
+        _reset_vehicle_to_road()
+        return
+
     var keyboard_steer := float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT))
     var keyboard_throttle := 1.0 if (Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)) else 0.0
     var keyboard_reverse := 1.0 if (Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) else 0.0
@@ -890,7 +975,7 @@ func _physics_process(_delta: float) -> void:
 
     var reset_down := Input.is_key_pressed(KEY_R)
     if reset_down and not _reset_key_was_down:
-        vehicle.reset_to_safe()
+        _reset_vehicle_to_road()
     _reset_key_was_down = reset_down
 
     var horn_down := Input.is_key_pressed(KEY_H)
