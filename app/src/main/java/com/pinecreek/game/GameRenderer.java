@@ -371,21 +371,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             // Chase-camera dead zone:
             // Steering first moves/rotates the truck inside the frame. The camera
             // does NOT immediately rotate with every steering input.
-            float delta = VehiclePhysics.normalizeAngle(heading - cameraHeading);
-            float deadZone = (float)Math.toRadians(10.0f);
-            float absDelta = Math.abs(delta);
-            boolean steeringNow = Math.abs(steeringAngle) > Math.toRadians(2.0f);
-
-            if (steeringNow && absDelta > deadZone) {
-                float excess = absDelta - deadZone;
-                float follow = 1f - (float)Math.exp(-dt * (1.45f + speedAbs * .018f));
-                cameraHeading = VehiclePhysics.normalizeAngle(
-                        cameraHeading + Math.signum(delta) * excess * follow);
-            } else if (!steeringNow) {
-                // Once the driver straightens the wheel, gently recenter the camera.
-                float follow = 1f - (float)Math.exp(-dt * (1.15f + speedAbs * .012f));
-                cameraHeading = VehiclePhysics.normalizeAngle(cameraHeading + delta * follow);
-            }
+            cameraHeading = ChaseCameraMath.updateHeading(
+                    heading, cameraHeading, steeringAngle, speedAbs, dt);
 
             float camBack = 12.6f + Math.min(4.4f,speedAbs*.18f);
             float camX = px - (float)Math.sin(cameraHeading)*camBack;
