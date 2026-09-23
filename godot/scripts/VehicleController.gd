@@ -109,7 +109,9 @@ func _physics_process(delta: float) -> void:
     steering_state = move_toward(steering_state, steer_input, rate * delta)
 
     var max_steer_deg: float = lerpf(31.0, 7.0, float(pow(speed_ratio, 0.55)))
-    var steer_angle: float = deg_to_rad(max_steer_deg) * steering_state
+    # The pickup model uses +Z as forward. Positive Y rotation therefore maps
+    # opposite to the driver's left/right expectation, so invert wheel yaw here.
+    var steer_angle: float = -deg_to_rad(max_steer_deg) * steering_state
 
     var grounded: int = 0
 

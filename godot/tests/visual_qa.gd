@@ -43,9 +43,21 @@ func _run() -> void:
     await process_frame
     await physics_frame
 
-    # QA must follow the same title -> game-start path as the real game.
+    # Story selection must be reachable from the title and render cleanly.
+    main._show_story_select()
+    _check(main.story_select_layer.visible, "story selection opens from title")
+    await _capture("/home/festice/ChatGPT-dev/PineCreekGame/godot/build/qa-story-select.png")
+    main._story_select_back()
+    _check(main.title_layer.visible, "story selection returns to title")
+
+    # QA then follows the same title -> game-start path as the real game.
     main._start_game()
     await physics_frame
+    _check(main.pause_button.visible, "pause button appears during gameplay")
+    main._open_pause()
+    _check(main.pause_layer.visible and paused, "pause menu freezes gameplay")
+    main._resume_game()
+    _check(not paused and not main.pause_layer.visible, "resume closes pause menu")
     main.set_physics_process(false)
 
     var car: PineVehicle = main.vehicle
@@ -69,8 +81,8 @@ func _run() -> void:
     var car_yaw := rad_to_deg(car.rotation.y)
     var camera_yaw := rad_to_deg(chase.follow_yaw)
     print("LEFT pos=",car.global_position," speed=",car.get_speed_kmh()," car_yaw=",car_yaw," cam_yaw=",camera_yaw)
-    _check(car.global_position.x < -0.4, "left steering moves vehicle left")
-    _check(car_yaw < -5.0, "left steering rotates vehicle left")
+    _check(car.global_position.x > 0.4, "left steering moves vehicle to driver-left (+X)")
+    _check(car_yaw > 5.0, "left steering rotates vehicle toward driver-left")
     _check(absf(car_yaw - camera_yaw) > 2.0, "camera does not rotate instantly with vehicle")
     await _capture(out + "/qa-left.png")
 
@@ -84,6 +96,15 @@ func _run() -> void:
     _check(reverse_speed < -3.0, "reverse produces negative vehicle-forward speed")
     _check(car.global_position.z < 21.7, "reverse moves vehicle backward in world from identity heading")
     await _capture(out + "/qa-reverse.png")
+
+    # Reverse with left lock must also follow the driver's left input.
+    await _reset(car,chase)
+    car.set_controls(-0.72,0.0,0.0,1.0)
+    for i in range(220):
+        await physics_frame
+    print("REVERSE_LEFT pos=",car.global_position," yaw=",rad_to_deg(car.rotation.y))
+    _check(car.global_position.x < -0.03 and rad_to_deg(car.rotation.y) < -4.0, "left wheel angle gives correct reverse yaw/path")
+    await _capture(out + "/qa-reverse-left.png")
 
     main.queue_free()
     await process_frame

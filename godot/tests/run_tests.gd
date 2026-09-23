@@ -105,7 +105,7 @@ func _run() -> void:
     for i in range(170):
         await physics_frame
     var left_x := car.global_position.x
-    check(left_x < -0.08, "left steering curves vehicle to its left")
+    check(left_x > 0.08, "left steering curves vehicle to its driver-left (+X with +Z forward)")
 
     car.freeze = true
     car.global_transform = Transform3D(Basis.IDENTITY, Vector3(0,0.62,0))
@@ -117,8 +117,20 @@ func _run() -> void:
     for i in range(180):
         await physics_frame
     var right_x := car.global_position.x
-    check(right_x > 0.08, "right steering curves vehicle to its right")
+    check(right_x < -0.08, "right steering curves vehicle to its driver-right (-X with +Z forward)")
     check(absf(absf(left_x) - absf(right_x)) < maxf(1.2, absf(left_x)*0.5), "left/right steering response stays reasonably symmetric")
+
+    car.freeze = true
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(0,0.62,0))
+    car.linear_velocity = Vector3.ZERO
+    car.angular_velocity = Vector3.ZERO
+    car.steering_state = 0.0
+    car.freeze = false
+    await physics_frame
+    car.set_controls(-1.0,0.0,0.0,1.0)
+    for i in range(220):
+        await physics_frame
+    check(car.global_position.x < -0.03, "left wheel angle produces the expected opposite yaw/path while reversing")
 
     # Timed-story regression: timeout restarts, arrival advances.
     var story := PineStoryDirector.new()
@@ -140,7 +152,13 @@ func _run() -> void:
     story._process(0.01)
     check(story.episode_index == 9 and story.stage_index == 0,
         "reaching timed destination advances to next episode")
-    check(story.episodes.size() >= 12, "campaign contains multiple crazy town episodes")
+    check(story.episodes.size() >= 24, "campaign contains at least 24 crazy town episodes")
+    story.start_campaign(12)
+    check(story.episode_index == 12 and story.stage_index == 0, "story selector can start an arbitrary episode")
+    check(story.get_episode_title(12).contains("ケビン"), "story selector exposes episode titles")
+    check(load("res://assets/audio/pine_creek_radio.wav") is AudioStreamWAV, "original BGM WAV imports")
+    check(load("res://assets/audio/engine_idle.wav") is AudioStreamWAV, "engine loop WAV imports")
+    check(load("res://assets/audio/snow_skid.wav") is AudioStreamWAV, "snow skid WAV imports")
 
     world.queue_free()
     await process_frame

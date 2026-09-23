@@ -1,80 +1,70 @@
 class_name PineVehicleAudio
 extends Node
 
-const MIX_RATE := 22050.0
-
 var vehicle: PineVehicle
-var player: AudioStreamPlayer
-var playback: AudioStreamGeneratorPlayback
-var engine_phase := 0.0
-var second_phase := 0.0
-var horn_phase_a := 0.0
-var horn_phase_b := 0.0
-var horn_time := 0.0
-var filtered_rpm := 850.0
+var engine: AudioStreamPlayer
+var snow: AudioStreamPlayer
+var skid: AudioStreamPlayer
+var horn: AudioStreamPlayer
 
 func _ready() -> void:
-    var generator := AudioStreamGenerator.new()
-    generator.mix_rate = MIX_RATE
-    generator.buffer_length = 0.22
+    engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -9.0)
+    snow = _make_loop_player("SnowRoad", "res://assets/audio/snow_roll.wav", -40.0)
+    skid = _make_loop_player("SnowSkid", "res://assets/audio/snow_skid.wav", -45.0)
 
-    player = AudioStreamPlayer.new()
-    player.stream = generator
-    player.volume_db = -5.0
-    add_child(player)
-    player.play()
-    playback = player.get_stream_playback() as AudioStreamGeneratorPlayback
-    set_process(true)
+    horn = AudioStreamPlayer.new()
+    horn.name = "TruckHorn"
+    horn.stream = load("res://assets/audio/truck_horn.wav")
+    horn.volume_db = -3.5
+    add_child(horn)
+
+func _make_loop_player(name_text: String, path: String, volume: float) -> AudioStreamPlayer:
+    var p := AudioStreamPlayer.new()
+    p.name = name_text
+    var stream := load(path)
+    if stream is AudioStreamWAV:
+        var wav := (stream as AudioStreamWAV).duplicate() as AudioStreamWAV
+        wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+        p.stream = wav
+    else:
+        p.stream = stream
+    p.volume_db = volume
+    add_child(p)
+    p.play()
+    return p
 
 func attach_vehicle(v: PineVehicle) -> void:
     vehicle = v
 
 func trigger_horn() -> void:
-    horn_time = 0.34
+    if horn != null:
+        horn.play()
 
 func _process(delta: float) -> void:
-    if vehicle == null or playback == null:
+    if vehicle == null:
         return
 
-    horn_time = maxf(0.0, horn_time - delta)
+    var speed := vehicle.linear_velocity.length()
+    var throttle := maxf(vehicle.throttle_input, vehicle.reverse_input * 0.78)
+    var forward_speed := absf(vehicle.get_forward_speed_kmh()) / 3.6
+    var rpm_norm := clampf((forward_speed * 112.0 + throttle * 2100.0) / 4300.0, 0.0, 1.0)
 
-    var speed_mps := vehicle.linear_velocity.length()
-    var throttle := maxf(vehicle.throttle_input, vehicle.reverse_input * 0.72)
-    var rpm_target := 820.0 + speed_mps * 105.0 + throttle * 1850.0
-    rpm_target = clampf(rpm_target, 760.0, 4300.0)
-    filtered_rpm = lerpf(filtered_rpm, rpm_target, 1.0 - exp(-5.8 * delta))
+    engine.pitch_scale = lerpf(engine.pitch_scale, lerpf(0.78, 1.62, rpm_norm), 1.0 - exp(-5.0 * delta))
+    engine.volume_db = lerpf(-14.0, -4.5, clampf(0.18 + throttle * 0.72 + speed / 70.0, 0.0, 1.0))
 
-    var frames := playback.get_frames_available()
-    if frames <= 0:
-        return
+    var road_amount := clampf(speed / 20.0, 0.0, 1.0)
+    snow.pitch_scale = lerpf(0.74, 1.28, road_amount)
+    snow.volume_db = lerpf(-42.0, -15.0, road_amount)
 
-    var engine_hz := filtered_rpm / 60.0 * 2.0
-    var engine_amp := 0.045 + throttle * 0.075 + clampf(speed_mps / 28.0,0.0,1.0) * 0.025
-
-    for _i in range(frames):
-        engine_phase = fmod(engine_phase + TAU * engine_hz / MIX_RATE, TAU)
-        second_phase = fmod(second_phase + TAU * engine_hz * 0.5 / MIX_RATE, TAU)
-
-        var combustion := sin(engine_phase) * 0.60
-        combustion += sin(engine_phase * 2.0 + 0.36) * 0.22
-        combustion += sin(second_phase) * 0.18
-        var sample := combustion * engine_amp
-
-        if horn_time > 0.0:
-            horn_phase_a = fmod(horn_phase_a + TAU * 330.0 / MIX_RATE, TAU)
-            horn_phase_b = fmod(horn_phase_b + TAU * 415.0 / MIX_RATE, TAU)
-            sample += (sin(horn_phase_a) * 0.15 + sin(horn_phase_b) * 0.11)
-
-        sample = clampf(sample,-0.72,0.72)
-        playback.push_frame(Vector2(sample,sample))
+    var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
+    var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)
+    skid.pitch_scale = lerpf(0.82, 1.18, clampf(speed / 18.0, 0.0, 1.0))
+    skid.volume_db = lerpf(-45.0, -10.0, scrub)
 
 func shutdown() -> void:
-    set_process(false)
-    if player != null:
-        player.stop()
-    playback = null
-    if player != null:
-        player.stream = null
+    for p in [engine, snow, skid, horn]:
+        if p != null:
+            p.stop()
 
 func _exit_tree() -> void:
     shutdown()

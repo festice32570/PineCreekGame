@@ -2,16 +2,22 @@ extends Node3D
 
 var vehicle: PineVehicle
 var vehicle_audio: PineVehicleAudio
+var game_audio: PineGameAudio
 var touch: PineTouchControls
 var chase: PineChaseCamera
 var hud: Label
 var info_label: Label
 var title_layer: CanvasLayer
+var story_select_layer: CanvasLayer
+var pause_layer: CanvasLayer
+var pause_button: Button
 var story: PineStoryDirector
 var objective_label: Label
 var dialogue_label: Label
 var mission_marker: Node3D
 var game_started := false
+var game_paused := false
+var selected_episode := 0
 var _reset_key_was_down := false
 var _horn_key_was_down := false
 var _action_key_was_down := false
@@ -23,7 +29,10 @@ func _ready() -> void:
     _build_camera()
     _build_ui()
     _build_story()
+    _build_audio()
     _build_title()
+    _build_story_select()
+    _build_pause_menu()
     if OS.has_environment("PINE_SKIP_TITLE"):
         _start_game()
     if OS.has_environment("PINE_CAPTURE_PATH"):
@@ -528,6 +537,16 @@ func _build_ui() -> void:
     layer.add_child(dialogue_label)
     dialogue_label.visible = false
 
+    pause_button = Button.new()
+    pause_button.text = "Ⅱ"
+    pause_button.position = Vector2(1008,24)
+    pause_button.size = Vector2(104,72)
+    pause_button.add_theme_font_size_override("font_size",30)
+    pause_button.focus_mode = Control.FOCUS_NONE
+    pause_button.pressed.connect(_open_pause)
+    layer.add_child(pause_button)
+    pause_button.visible = false
+
 func _build_story() -> void:
     story = PineStoryDirector.new()
     story.name = "StoryDirector"
@@ -579,6 +598,11 @@ func _on_marker_changed(pos: Vector3, visible_now: bool) -> void:
     mission_marker.global_position = pos
     mission_marker.visible = visible_now
 
+func _build_audio() -> void:
+    game_audio = PineGameAudio.new()
+    game_audio.name = "GameAudio"
+    add_child(game_audio)
+
 func _build_title() -> void:
     title_layer = CanvasLayer.new()
     title_layer.name = "Title"
@@ -590,7 +614,7 @@ func _build_title() -> void:
     art_bg.texture = load("res://assets/ui/pine_creek_keyart.png")
     art_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     art_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-    art_bg.modulate = Color(0.34,0.34,0.34,1.0)
+    art_bg.modulate = Color(0.32,0.32,0.32,1.0)
     art_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
     title_layer.add_child(art_bg)
 
@@ -604,28 +628,37 @@ func _build_title() -> void:
 
     var shade := ColorRect.new()
     shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    shade.color = Color(0.0,0.0,0.0,0.12)
+    shade.color = Color(0.0,0.0,0.0,0.18)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     title_layer.add_child(shade)
 
     var panel := VBoxContainer.new()
     panel.set_anchors_preset(Control.PRESET_CENTER)
-    panel.position = Vector2(-220,105)
-    panel.size = Vector2(440,190)
+    panel.position = Vector2(-230,62)
+    panel.size = Vector2(460,300)
     panel.alignment = BoxContainer.ALIGNMENT_CENTER
+    panel.add_theme_constant_override("separation",12)
     title_layer.add_child(panel)
 
     var start := Button.new()
-    start.text = "ゲーム開始"
-    start.custom_minimum_size = Vector2(440,82)
-    start.add_theme_font_size_override("font_size",30)
+    start.text = "最初から開始"
+    start.custom_minimum_size = Vector2(460,76)
+    start.add_theme_font_size_override("font_size",28)
     start.pressed.connect(_start_game)
     panel.add_child(start)
 
+    var select := Button.new()
+    select.text = "ストーリーを選ぶ"
+    select.custom_minimum_size = Vector2(460,68)
+    select.add_theme_font_size_override("font_size",26)
+    select.pressed.connect(_show_story_select)
+    panel.add_child(select)
+
     var note := Label.new()
-    note.text = "v0.7.0 alpha  •  Godot新物理版\n車体基準の駆動 / 4輪サスペンション / マルチタッチ"
+    note.text = "v0.8.0 alpha  •  24ストーリー / オリジナルBGM・効果音 / ポーズメニュー"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    note.add_theme_font_size_override("font_size",18)
+    note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    note.add_theme_font_size_override("font_size",17)
     note.add_theme_color_override("font_color",Color.WHITE)
     note.add_theme_color_override("font_shadow_color",Color.BLACK)
     note.add_theme_constant_override("shadow_offset_x",2)
@@ -634,19 +667,210 @@ func _build_title() -> void:
 
     vehicle.freeze = true
 
+func _build_story_select() -> void:
+    story_select_layer = CanvasLayer.new()
+    story_select_layer.name = "StorySelect"
+    story_select_layer.layer = 25
+    story_select_layer.visible = false
+    add_child(story_select_layer)
+
+    var shade := ColorRect.new()
+    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    shade.color = Color(0.015,0.02,0.025,0.95)
+    story_select_layer.add_child(shade)
+
+    var panel := VBoxContainer.new()
+    panel.set_anchors_preset(Control.PRESET_CENTER)
+    panel.position = Vector2(-470,-320)
+    panel.size = Vector2(940,640)
+    panel.add_theme_constant_override("separation",10)
+    story_select_layer.add_child(panel)
+
+    var heading := Label.new()
+    heading.text = "PINE CREEK　ストーリー選択"
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    heading.add_theme_font_size_override("font_size",32)
+    panel.add_child(heading)
+
+    var hint := Label.new()
+    hint.text = "好きな事件から開始できます。クリア後は次の事件へ続きます。"
+    hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    hint.add_theme_font_size_override("font_size",18)
+    panel.add_child(hint)
+
+    var scroll := ScrollContainer.new()
+    scroll.custom_minimum_size = Vector2(920,500)
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    panel.add_child(scroll)
+
+    var list := VBoxContainer.new()
+    list.custom_minimum_size = Vector2(890,0)
+    list.add_theme_constant_override("separation",8)
+    scroll.add_child(list)
+
+    for i in range(story.get_episode_count()):
+        var b := Button.new()
+        b.text = "%s\n%s" % [story.get_episode_title(i), story.get_episode_summary(i)]
+        b.custom_minimum_size = Vector2(870,74)
+        b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+        b.add_theme_font_size_override("font_size",19)
+        b.pressed.connect(_start_selected_episode.bind(i))
+        list.add_child(b)
+
+    var back := Button.new()
+    back.text = "タイトルへ戻る"
+    back.custom_minimum_size = Vector2(940,58)
+    back.add_theme_font_size_override("font_size",22)
+    back.pressed.connect(_story_select_back)
+    panel.add_child(back)
+
+func _build_pause_menu() -> void:
+    pause_layer = CanvasLayer.new()
+    pause_layer.name = "PauseMenu"
+    pause_layer.layer = 30
+    pause_layer.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+    pause_layer.visible = false
+    add_child(pause_layer)
+
+    var shade := ColorRect.new()
+    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    shade.color = Color(0.0,0.0,0.0,0.72)
+    pause_layer.add_child(shade)
+
+    var panel := VBoxContainer.new()
+    panel.set_anchors_preset(Control.PRESET_CENTER)
+    panel.position = Vector2(-230,-190)
+    panel.size = Vector2(460,380)
+    panel.alignment = BoxContainer.ALIGNMENT_CENTER
+    panel.add_theme_constant_override("separation",14)
+    pause_layer.add_child(panel)
+
+    var title := Label.new()
+    title.text = "一時停止"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size",38)
+    panel.add_child(title)
+
+    var resume := Button.new()
+    resume.text = "ゲームに戻る"
+    resume.custom_minimum_size = Vector2(460,72)
+    resume.add_theme_font_size_override("font_size",25)
+    resume.pressed.connect(_resume_game)
+    panel.add_child(resume)
+
+    var stories := Button.new()
+    stories.text = "ストーリー選択へ"
+    stories.custom_minimum_size = Vector2(460,66)
+    stories.add_theme_font_size_override("font_size",23)
+    stories.pressed.connect(_pause_to_story_select)
+    panel.add_child(stories)
+
+    var title_button := Button.new()
+    title_button.text = "タイトルへ戻る"
+    title_button.custom_minimum_size = Vector2(460,66)
+    title_button.add_theme_font_size_override("font_size",23)
+    title_button.pressed.connect(_pause_to_title)
+    panel.add_child(title_button)
+
+func _story_select_back() -> void:
+    if game_audio != null:
+        game_audio.click()
+    story_select_layer.visible = false
+    title_layer.visible = true
+
+func _show_story_select() -> void:
+    if game_audio != null:
+        game_audio.click()
+    title_layer.visible = false
+    story_select_layer.visible = true
+
+func _set_game_ui_visible(visible_now: bool) -> void:
+    touch.visible = visible_now
+    hud.visible = visible_now
+    info_label.visible = visible_now
+    objective_label.visible = visible_now
+    pause_button.visible = visible_now
+    if not visible_now:
+        dialogue_label.visible = false
+
+func _reset_vehicle_for_story() -> void:
+    vehicle.freeze = true
+    vehicle.global_transform = Transform3D(Basis.IDENTITY, Vector3(0,0.60,22))
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+    vehicle.steering_state = 0.0
+    vehicle.last_safe_transform = vehicle.global_transform
+    vehicle.freeze = false
+
+func _start_selected_episode(index: int) -> void:
+    if game_audio != null:
+        game_audio.click()
+        game_audio.set_ducked(false)
+    get_tree().paused = false
+    game_paused = false
+    game_started = true
+    selected_episode = index
+    _reset_vehicle_for_story()
+    _set_game_ui_visible(true)
+    if story != null:
+        story.start_campaign(index)
+    title_layer.visible = false
+    story_select_layer.visible = false
+    pause_layer.visible = false
+
+func _open_pause() -> void:
+    if not game_started or game_paused:
+        return
+    game_paused = true
+    if game_audio != null:
+        game_audio.pause_cue()
+        game_audio.set_ducked(true)
+    pause_layer.visible = true
+    touch.visible = false
+    pause_button.visible = false
+    get_tree().paused = true
+
+func _resume_game() -> void:
+    get_tree().paused = false
+    game_paused = false
+    pause_layer.visible = false
+    touch.visible = true
+    pause_button.visible = true
+    if game_audio != null:
+        game_audio.click()
+        game_audio.set_ducked(false)
+
+func _leave_game_to_menu() -> void:
+    get_tree().paused = false
+    game_paused = false
+    game_started = false
+    vehicle.freeze = true
+    vehicle.set_controls(0.0,0.0,1.0,0.0)
+    if story != null:
+        story.stop_campaign()
+    _set_game_ui_visible(false)
+    pause_layer.visible = false
+    if game_audio != null:
+        game_audio.set_ducked(false)
+
+func _pause_to_story_select() -> void:
+    _leave_game_to_menu()
+    if game_audio != null:
+        game_audio.click()
+    title_layer.visible = false
+    story_select_layer.visible = true
+
+func _pause_to_title() -> void:
+    _leave_game_to_menu()
+    if game_audio != null:
+        game_audio.click()
+    story_select_layer.visible = false
+    title_layer.visible = true
+
 func _start_game() -> void:
     if game_started:
         return
-    game_started = true
-    vehicle.freeze = false
-    touch.visible = true
-    hud.visible = true
-    info_label.visible = true
-    objective_label.visible = true
-    if story != null:
-        story.start_campaign()
-    if title_layer != null:
-        title_layer.visible = false
+    _start_selected_episode(0)
 
 func _physics_process(_delta: float) -> void:
     if not game_started:

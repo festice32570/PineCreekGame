@@ -19,8 +19,8 @@ Pine CreekをAndroid標準API + 自前OpenGL実装から **Godot 4.7.2** へ段�
 - Godot 4.7.2 stable
 - Blender 4.5 LTS系
 - OpenJDK 17
-- Android SDK Platform 35
-- Android Build-Tools 35.0.1
+- Android SDK Platform 36
+- Android Build-Tools 36.0.0
 
 ## 自動テスト
 
@@ -35,8 +35,11 @@ godot --headless --path . --script res://tests/run_tests.gd
 - 指を片方離しても別の操作が維持されること
 - 前進が車体前方向であること
 - バックが車体後方向であること
-- 左操作で左、右操作で右へ旋回すること
+- 前進時の左/右操舵が運転者基準で正しいこと
+- 後退時に左舵で逆向きヨーが発生すること
 - 左右の応答が極端に非対称にならないこと
+- 24話の任意エピソード開始
+- BGM/エンジン/スキッドWAVのインポート
 
 ## ローカルQA
 
@@ -44,7 +47,7 @@ godot --headless --path . --script res://tests/run_tests.gd
 ./tools/qa_native.sh
 ```
 
-Zorin上で実際に3D描画し、直進 / 左旋回 / バック / タイトル画面をPNGへ保存します。
+Zorin上で実際に3D描画し、ストーリー選択 / 直進 / 左旋回 / バック / 後退左操舵 / タイトル画面をPNGへ保存します。
 
 ## Android APK
 
@@ -56,7 +59,7 @@ Zorin上で実際に3D描画し、直進 / 左旋回 / バック / タイトル�
 
 生成物:
 
-`build/PineCreek-Godot-v0.7.0-alpha1.apk`
+`build/PineCreek-Godot-v0.8.0-alpha1.apk`
 
 ## 3Dモデル
 
