@@ -367,15 +367,36 @@ public class GameRenderer implements GLSurfaceView.Renderer {
                 cameraHeading = heading;
                 cameraReady = true;
             }
-            float delta = VehiclePhysics.normalizeAngle(heading - cameraHeading);
-            float follow = 1f - (float)Math.exp(-dt * (4.4f + speedAbs * .035f));
-            cameraHeading = VehiclePhysics.normalizeAngle(cameraHeading + delta * follow);
 
-            float camBack = 12.2f + Math.min(4.8f,speedAbs*.20f);
+            // Chase-camera dead zone:
+            // Steering first moves/rotates the truck inside the frame. The camera
+            // does NOT immediately rotate with every steering input.
+            float delta = VehiclePhysics.normalizeAngle(heading - cameraHeading);
+            float deadZone = (float)Math.toRadians(10.0f);
+            float absDelta = Math.abs(delta);
+            boolean steeringNow = Math.abs(steeringAngle) > Math.toRadians(2.0f);
+
+            if (steeringNow && absDelta > deadZone) {
+                float excess = absDelta - deadZone;
+                float follow = 1f - (float)Math.exp(-dt * (1.45f + speedAbs * .018f));
+                cameraHeading = VehiclePhysics.normalizeAngle(
+                        cameraHeading + Math.signum(delta) * excess * follow);
+            } else if (!steeringNow) {
+                // Once the driver straightens the wheel, gently recenter the camera.
+                float follow = 1f - (float)Math.exp(-dt * (1.15f + speedAbs * .012f));
+                cameraHeading = VehiclePhysics.normalizeAngle(cameraHeading + delta * follow);
+            }
+
+            float camBack = 12.6f + Math.min(4.4f,speedAbs*.18f);
             float camX = px - (float)Math.sin(cameraHeading)*camBack;
             float camZ = pz + (float)Math.cos(cameraHeading)*camBack;
-            float lookX = px + (float)Math.sin(heading)*(6.0f + speedAbs*.08f);
-            float lookZ = pz - (float)Math.cos(heading)*(6.0f + speedAbs*.08f);
+
+            // Important: look direction follows CAMERA heading, not vehicle heading.
+            // This is what lets the truck visibly travel left/right across the screen
+            // before the camera catches up, like a normal third-person racer.
+            float lookAhead = 6.2f + speedAbs*.07f;
+            float lookX = px + (float)Math.sin(cameraHeading)*lookAhead;
+            float lookZ = pz - (float)Math.cos(cameraHeading)*lookAhead;
             Matrix.setLookAtM(view,0,camX,6.15f,camZ,lookX,1.45f,lookZ,0,1,0);
         } else {
             Matrix.perspectiveM(projection,0,63f,viewAspect,.12f,560f);
