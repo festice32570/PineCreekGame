@@ -23,25 +23,30 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
     private GameSurface game;
     private AudioEngine audio;
     private SharedPreferences prefs;
+
     private TextView hud;
     private TextView objective;
     private TextView dialogue;
     private TextView chapter;
+
     private LinearLayout leftPad;
     private LinearLayout rightPad;
     private FrameLayout titleOverlay;
+    private FrameLayout storyOverlay;
     private FrameLayout endingOverlay;
     private Button continueButton;
+
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+        getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         immersive();
 
-        prefs = getSharedPreferences("pine_creek_save", MODE_PRIVATE);
+        prefs = getSharedPreferences("pine_creek_save_v2", MODE_PRIVATE);
         audio = new AudioEngine();
 
         root = new FrameLayout(this);
@@ -51,10 +56,12 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         buildHud();
         buildControls();
         buildTitle();
+        buildStorySelector();
         buildEnding();
 
         setContentView(root);
         audio.start();
+        audio.setMenuMode(true);
         game.renderer.setGameplay(false);
     }
 
@@ -66,67 +73,74 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
     }
 
     private void buildHud() {
-        hud = panelText(17, 0xC7152026);
+        hud = panelText(16, 0xC7152026);
         FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
-        hp.setMargins(16, 16, 0, 0);
+        hp.setMargins(14, 14, 0, 0);
         root.addView(hud, hp);
 
-        objective = panelText(17, 0xD91B242A);
+        objective = panelText(16, 0xD91B242A);
         objective.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams op = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .63f), -2,
-                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        op.topMargin = 16;
+                (int)(getResources().getDisplayMetrics().widthPixels * .59f),
+                -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        op.topMargin = 14;
         root.addView(objective, op);
 
-        chapter = panelText(15, 0xA91C252B);
+        chapter = panelText(14, 0xB51C252B);
         chapter.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.RIGHT);
-        cp.setMargins(0, 16, 16, 0);
+        cp.setMargins(0, 14, 14, 0);
         root.addView(chapter, cp);
 
-        dialogue = panelText(20, 0xEE151A1D);
+        dialogue = panelText(19, 0xEE151A1D);
         dialogue.setVisibility(View.GONE);
         FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .72f), -2,
-                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        dp.bottomMargin = 22;
+                (int)(getResources().getDisplayMetrics().widthPixels * .72f),
+                -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        dp.bottomMargin = 18;
         root.addView(dialogue, dp);
 
-        hud.setVisibility(View.GONE);
-        objective.setVisibility(View.GONE);
-        chapter.setVisibility(View.GONE);
+        setGameUi(false);
     }
 
     private void buildControls() {
         leftPad = new LinearLayout(this);
         leftPad.setOrientation(LinearLayout.HORIZONTAL);
-        Button left = gameButton("左");
-        Button right = gameButton("右");
+
+        Button left = gameButton("◀");
+        Button right = gameButton("▶");
         Button horn = gameButton("警笛");
         leftPad.addView(left);
         leftPad.addView(right);
         leftPad.addView(horn);
+
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.LEFT | Gravity.BOTTOM);
-        lp.setMargins(14, 0, 0, 14);
+        lp.setMargins(12, 0, 0, 12);
         root.addView(leftPad, lp);
 
         rightPad = new LinearLayout(this);
         rightPad.setOrientation(LinearLayout.HORIZONTAL);
+
         Button action = gameButton("アクション");
+        Button reverse = gameButton("バック");
         Button brake = gameButton("ブレーキ");
         Button accel = gameButton("アクセル");
+
         rightPad.addView(action);
+        rightPad.addView(reverse);
         rightPad.addView(brake);
         rightPad.addView(accel);
+
         FrameLayout.LayoutParams rp = new FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT | Gravity.BOTTOM);
-        rp.setMargins(0, 0, 14, 14);
+        rp.setMargins(0, 0, 12, 12);
         root.addView(rightPad, rp);
 
-        bindHold(left, 0);
-        bindHold(right, 1);
-        bindHold(brake, 2);
-        bindHold(accel, 3);
+        bindHold(left, GameRenderer.CTRL_LEFT);
+        bindHold(right, GameRenderer.CTRL_RIGHT);
+        bindHold(reverse, GameRenderer.CTRL_REVERSE);
+        bindHold(brake, GameRenderer.CTRL_BRAKE);
+        bindHold(accel, GameRenderer.CTRL_ACCEL);
+
         horn.setOnClickListener(v -> {
             audio.horn();
             game.renderer.honk();
@@ -141,52 +155,96 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         titleOverlay = new FrameLayout(this);
         titleOverlay.setBackgroundColor(0x8D0B1318);
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(Gravity.CENTER_HORIZONTAL);
-        card.setPadding(34, 28, 34, 30);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xE8172127);
-        bg.setCornerRadius(28f);
-        bg.setStroke(2, 0x66FFFFFF);
-        card.setBackground(bg);
+        LinearLayout card = menuCard();
 
         TextView title = new TextView(this);
         title.setText("PINE CREEK\n冬の町");
         title.setTextColor(Color.WHITE);
         title.setGravity(Gravity.CENTER);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setTextSize(36);
+        title.setTextSize(34);
         card.addView(title);
 
         TextView sub = new TextView(this);
         sub.setText("人口は少ない。トラックは多い。常識は春まで雪の下。");
         sub.setTextColor(0xFFE0E5E7);
-        sub.setTextSize(16);
+        sub.setTextSize(15);
         sub.setGravity(Gravity.CENTER);
-        sub.setPadding(0, 8, 0, 22);
+        sub.setPadding(0, 8, 0, 18);
         card.addView(sub);
 
-        Button newGame = menuButton("ニューゲーム");
+        Button newGame = menuButton("ストーリーを選ぶ");
         continueButton = menuButton("続きから");
+        Button free = menuButton("自由走行");
         Button how = menuButton("遊び方");
+
         card.addView(newGame);
         card.addView(continueButton);
+        card.addView(free);
         card.addView(how);
 
-        newGame.setOnClickListener(v -> startGame(true));
-        continueButton.setOnClickListener(v -> startGame(false));
-        how.setOnClickListener(v -> Toast.makeText(this,
-                "左・右で操舵。アクセル／ブレーキで運転。黄色い印の近くでアクション。\n雪原は滑りやすく遅い。警笛は住民にも七面鳥にも効く。",
+        newGame.setOnClickListener(v -> {
+            titleOverlay.setVisibility(View.GONE);
+            storyOverlay.setVisibility(View.VISIBLE);
+        });
+        continueButton.setOnClickListener(v -> continueGame());
+        free.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_FREE));
+        how.setOnClickListener(v -> Toast.makeText(
+                this,
+                "左・右：ハンドル\nアクセル：前進　バック：後退\nブレーキ：減速・停止\n黄色い印でアクション\n雪原は滑りやすく、速度も落ちます。\n警笛は住民と七面鳥に効きます。",
                 Toast.LENGTH_LONG).show());
 
         continueButton.setEnabled(prefs.getBoolean("has_save", false));
 
         FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .55f), -2,
-                Gravity.CENTER);
+                (int)(getResources().getDisplayMetrics().widthPixels * .52f),
+                -2, Gravity.CENTER);
         titleOverlay.addView(card, cardLp);
         root.addView(titleOverlay, new FrameLayout.LayoutParams(-1, -1));
+    }
+
+    private void buildStorySelector() {
+        storyOverlay = new FrameLayout(this);
+        storyOverlay.setBackgroundColor(0xB20A1116);
+        storyOverlay.setVisibility(View.GONE);
+
+        LinearLayout card = menuCard();
+
+        TextView t = new TextView(this);
+        t.setText("ストーリー選択");
+        t.setTextColor(Color.WHITE);
+        t.setTextSize(27);
+        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(0, 0, 0, 12);
+        card.addView(t);
+
+        Button winter = menuButton("初めての冬\nBBQ・除雪車・町民認定");
+        Button truck = menuButton("18台目のトラック\n消えた廃車を追え");
+        Button kevin = menuButton("ケビンの大脱走\n七面鳥 vs 町全体");
+        Button blackout = menuButton("停電の夜\n発電機と17台のブロックヒーター");
+        Button back = menuButton("戻る");
+
+        card.addView(winter);
+        card.addView(truck);
+        card.addView(kevin);
+        card.addView(blackout);
+        card.addView(back);
+
+        winter.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_WINTER));
+        truck.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_TRUCK));
+        kevin.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_KEVIN));
+        blackout.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_BLACKOUT));
+        back.setOnClickListener(v -> {
+            storyOverlay.setVisibility(View.GONE);
+            titleOverlay.setVisibility(View.VISIBLE);
+        });
+
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(
+                (int)(getResources().getDisplayMetrics().widthPixels * .58f),
+                -2, Gravity.CENTER);
+        storyOverlay.addView(card, cp);
+        root.addView(storyOverlay, new FrameLayout.LayoutParams(-1, -1));
     }
 
     private void buildEnding() {
@@ -194,73 +252,107 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         endingOverlay.setBackgroundColor(0xC511171B);
         endingOverlay.setVisibility(View.GONE);
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(Gravity.CENTER_HORIZONTAL);
-        card.setPadding(38, 30, 38, 32);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xF01A2429);
-        bg.setCornerRadius(28f);
-        bg.setStroke(2, 0x77FFFFFF);
-        card.setBackground(bg);
+        LinearLayout card = menuCard();
 
-        TextView t = new TextView(this);
-        t.setText("PINE CREEK 町民認定");
-        t.setTextColor(Color.WHITE);
-        t.setTextSize(31);
-        t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setGravity(Gravity.CENTER);
-        card.addView(t);
+        TextView endingTitle = new TextView(this);
+        endingTitle.setId(View.generateViewId());
+        endingTitle.setTag("ending_title");
+        endingTitle.setTextColor(Color.WHITE);
+        endingTitle.setTextSize(29);
+        endingTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        endingTitle.setGravity(Gravity.CENTER);
+        card.addView(endingTitle);
 
-        TextView body = new TextView(this);
-        body.setText("「初めての冬？」\n「トラックは買った？」\n「一回は埋まった？」\n\n全部済んだ。ようこそ。\nなお春になるまで道路の場所は保証されません。");
-        body.setTextColor(0xFFE4E8E9);
-        body.setTextSize(18);
-        body.setGravity(Gravity.CENTER);
-        body.setPadding(0, 18, 0, 20);
-        card.addView(body);
+        TextView endingBody = new TextView(this);
+        endingBody.setId(View.generateViewId());
+        endingBody.setTag("ending_body");
+        endingBody.setTextColor(0xFFE4E8E9);
+        endingBody.setTextSize(17);
+        endingBody.setGravity(Gravity.CENTER);
+        endingBody.setPadding(0, 16, 0, 18);
+        card.addView(endingBody);
 
-        Button free = menuButton("自由走行を続ける");
+        Button free = menuButton("この町を自由に走る");
+        Button another = menuButton("別のストーリー");
         Button title = menuButton("タイトルへ戻る");
+
         card.addView(free);
+        card.addView(another);
         card.addView(title);
 
         free.setOnClickListener(v -> {
             endingOverlay.setVisibility(View.GONE);
-            game.renderer.enterFreeRoam();
             setGameUi(true);
+            audio.setMenuMode(false);
+            game.renderer.enterFreeRoam();
+        });
+        another.setOnClickListener(v -> {
+            endingOverlay.setVisibility(View.GONE);
+            setGameUi(false);
+            game.renderer.setGameplay(false);
+            storyOverlay.setVisibility(View.VISIBLE);
+            audio.setMenuMode(true);
         });
         title.setOnClickListener(v -> showTitle());
 
         FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .56f), -2,
-                Gravity.CENTER);
+                (int)(getResources().getDisplayMetrics().widthPixels * .57f),
+                -2, Gravity.CENTER);
         endingOverlay.addView(card, cp);
         root.addView(endingOverlay, new FrameLayout.LayoutParams(-1, -1));
     }
 
-    private void startGame(boolean fresh) {
+    private LinearLayout menuCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(30, 22, 30, 24);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xE8172127);
+        bg.setCornerRadius(28f);
+        bg.setStroke(2, 0x66FFFFFF);
+        card.setBackground(bg);
+        return card;
+    }
+
+    private void startCampaign(int campaign) {
         titleOverlay.setVisibility(View.GONE);
+        storyOverlay.setVisibility(View.GONE);
+        endingOverlay.setVisibility(View.GONE);
+        setGameUi(true);
+        audio.setMenuMode(false);
+        prefs.edit().clear().apply();
+
+        if (campaign == GameRenderer.CAMPAIGN_FREE) {
+            game.renderer.newGame(GameRenderer.CAMPAIGN_FREE);
+        } else {
+            game.renderer.newGame(campaign);
+        }
+    }
+
+    private void continueGame() {
+        titleOverlay.setVisibility(View.GONE);
+        storyOverlay.setVisibility(View.GONE);
         endingOverlay.setVisibility(View.GONE);
         setGameUi(true);
         audio.setMenuMode(false);
 
-        if (fresh) {
-            prefs.edit().clear().apply();
-            game.renderer.newGame();
-        } else {
-            int stage = prefs.getInt("stage", 0);
-            float x = prefs.getFloat("x", 0f);
-            float z = prefs.getFloat("z", 22f);
-            float heading = prefs.getFloat("heading", 0f);
-            float fuel = prefs.getFloat("fuel", 100f);
-            int turkeyHits = prefs.getInt("turkey_hits", 0);
-            game.renderer.loadGame(stage, x, z, heading, fuel, turkeyHits);
-        }
+        int campaign = prefs.getInt("campaign", GameRenderer.CAMPAIGN_WINTER);
+        int stage = prefs.getInt("stage", 0);
+        float x = prefs.getFloat("x", 0f);
+        float z = prefs.getFloat("z", 22f);
+        float heading = prefs.getFloat("heading", 0f);
+        float speed = prefs.getFloat("speed", 0f);
+        float fuel = prefs.getFloat("fuel", 100f);
+        int special = prefs.getInt("special", 0);
+
+        game.renderer.loadGame(campaign, stage, x, z, heading, speed, fuel, special);
     }
 
     private void showTitle() {
         setGameUi(false);
+        storyOverlay.setVisibility(View.GONE);
         endingOverlay.setVisibility(View.GONE);
         titleOverlay.setVisibility(View.VISIBLE);
         continueButton.setEnabled(prefs.getBoolean("has_save", false));
@@ -270,12 +362,12 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
     private void setGameUi(boolean show) {
         int v = show ? View.VISIBLE : View.GONE;
-        hud.setVisibility(v);
-        objective.setVisibility(v);
-        chapter.setVisibility(v);
-        leftPad.setVisibility(v);
-        rightPad.setVisibility(v);
-        if (!show) dialogue.setVisibility(View.GONE);
+        if (hud != null) hud.setVisibility(v);
+        if (objective != null) objective.setVisibility(v);
+        if (chapter != null) chapter.setVisibility(v);
+        if (leftPad != null) leftPad.setVisibility(v);
+        if (rightPad != null) rightPad.setVisibility(v);
+        if (!show && dialogue != null) dialogue.setVisibility(View.GONE);
     }
 
     private TextView panelText(int sp, int color) {
@@ -283,10 +375,11 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         t.setTextColor(Color.WHITE);
         t.setTextSize(sp);
         t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        t.setPadding(16, 10, 16, 10);
+        t.setPadding(14, 9, 14, 9);
+
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
-        bg.setCornerRadius(16f);
+        bg.setCornerRadius(15f);
         bg.setStroke(2, 0x44FFFFFF);
         t.setBackground(bg);
         return t;
@@ -296,10 +389,13 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         Button b = new Button(this);
         b.setText(label);
         b.setTextColor(Color.WHITE);
-        b.setTextSize(15);
+        b.setTextSize(14);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setMinWidth(104);
-        b.setMinHeight(82);
+        b.setGravity(Gravity.CENTER);
+        b.setMinWidth(92);
+        b.setMinHeight(78);
+        b.setPadding(8, 4, 8, 4);
+
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(0xC020292F);
         bg.setCornerRadius(20f);
@@ -310,8 +406,9 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
     private Button menuButton(String label) {
         Button b = gameButton(label);
+        b.setMinHeight(62);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
-        p.topMargin = 10;
+        p.topMargin = 8;
         b.setLayoutParams(p);
         return b;
     }
@@ -342,28 +439,38 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
             dialogue.setText(speaker + "\n" + line);
             dialogue.setVisibility(View.VISIBLE);
             audio.event();
+
             ui.removeCallbacksAndMessages(null);
-            ui.postDelayed(() -> dialogue.setVisibility(View.GONE), 5500);
+            ui.postDelayed(() -> dialogue.setVisibility(View.GONE), 5600);
         });
     }
 
     @Override
-    public void onSave(int stage, float x, float z, float heading, float fuel, int turkeyHits) {
+    public void onSave(int campaign, int stage, float x, float z,
+                       float heading, float speed, float fuel, int special) {
+        if (campaign == GameRenderer.CAMPAIGN_FREE) return;
+
         prefs.edit()
                 .putBoolean("has_save", true)
+                .putInt("campaign", campaign)
                 .putInt("stage", stage)
                 .putFloat("x", x)
                 .putFloat("z", z)
                 .putFloat("heading", heading)
+                .putFloat("speed", speed)
                 .putFloat("fuel", fuel)
-                .putInt("turkey_hits", turkeyHits)
+                .putInt("special", special)
                 .apply();
     }
 
     @Override
-    public void onEnding() {
+    public void onEnding(String title, String body) {
         runOnUiThread(() -> {
             setGameUi(false);
+            TextView t = endingOverlay.findViewWithTag("ending_title");
+            TextView b = endingOverlay.findViewWithTag("ending_body");
+            t.setText(title);
+            b.setText(body);
             endingOverlay.setVisibility(View.VISIBLE);
             audio.setMenuMode(true);
         });

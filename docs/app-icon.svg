@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#ef9a6b"/>
+    <stop offset="0.45" stop-color="#6b6eb4"/>
+    <stop offset="1" stop-color="#263b59"/>
+  </linearGradient>
+</defs>
+<rect width="512" height="512" rx="88" fill="url(#sky)"/>
+<path d="M0 290L75 225l62 42 80-104 75 95 88-125 132 134v245H0z" fill="#f3f7fa"/>
+<g fill="#112a2a">
+  <path d="M52 310l32-96 32 96z"/><path d="M66 250l18-72 18 72z"/>
+  <path d="M407 310l32-98 32 98z"/><path d="M421 248l18-72 18 72z"/>
+</g>
+<g transform="translate(45 248)">
+  <path d="M35 80h270l43 66H18z" fill="#6f301f"/>
+  <path d="M92 31h150l35 53H72z" fill="#8f4028"/>
+  <path d="M116 41h98l24 41H94z" fill="#254b5a"/>
+  <path d="M13 140h341v20H5z" fill="#c4c6c5"/>
+  <circle cx="80" cy="150" r="40" fill="#181b1d"/><circle cx="284" cy="150" r="40" fill="#181b1d"/>
+  <circle cx="80" cy="150" r="15" fill="#c9cdd0"/><circle cx="284" cy="150" r="15" fill="#c9cdd0"/>
+  <rect x="35" y="93" width="34" height="26" rx="4" fill="#ffd36a"/>
+  <rect x="285" y="93" width="34" height="26" rx="4" fill="#ffd36a"/>
+</g>
+<g transform="translate(360 295)">
+  <ellipse cx="62" cy="65" rx="45" ry="50" fill="#5b2f19"/>
+  <path d="M53 55L15 2l48 28zM65 50L57 0l27 34zM82 55L121 8 105 61z" fill="#73391e"/>
+  <circle cx="75" cy="46" r="20" fill="#b92e25"/>
+  <circle cx="80" cy="41" r="6" fill="#f2ddb1"/>
+  <path d="M94 48l35 10-35 12z" fill="#f2b12d"/>
+</g>
+<rect x="32" y="25" width="448" height="96" rx="28" fill="#111d27" opacity=".82"/>
+<text x="256" y="78" text-anchor="middle" fill="#fff2dc" font-size="48" font-weight="900" font-family="sans-serif">PINE CREEK</text>
+<text x="256" y="111" text-anchor="middle" fill="#d8f0ff" font-size="27" font-weight="800" font-family="sans-serif">冬の町</text>
+<path d="M0 430c80-22 164 11 238-7 89-22 174 8 274-28v117H0z" fill="#fff" opacity=".78"/>
+</svg>
