@@ -148,7 +148,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
             game.renderer.honk();
         });
         action.setOnClickListener(v -> game.renderer.action());
-        reset.setOnClickListener(v -> game.renderer.resetVehicle());
+        reset.setOnClickListener(v -> game.queueEvent(() -> game.renderer.resetVehicle()));
 
         leftPad.setVisibility(View.GONE);
         rightPad.setVisibility(View.GONE);
