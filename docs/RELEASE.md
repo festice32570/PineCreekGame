@@ -1,86 +1,48 @@
-# Release Guide
+# Release Guide — Godot版
 
-## 通常の開発push
+Godot版ではGitHub Actionsを必須にしていません。現在はZorin/Linuxでテスト・release APK生成を行い、その確認済みAPKをGitHub Releaseへ公開します。
 
-mainへ通常のcommitをpushすると、
+## 1. QA
 
-- 車両物理セルフテスト
-- Android build
-- APK署名検証
-- package検証
-- Actions Artifact作成
-
-まで実行します。
-
-GitHub Releaseは作りません。
-
-## リリース確定
-
-### 1. バージョン更新
-
-`app/build.gradle`:
-
-```gradle
-versionCode 6
-versionName '0.6.0'
+```bash
+cd godot
+./tools/qa_native.sh
 ```
 
-### 2. ドキュメント更新
+`QA_NATIVE=PASS` を確認します。
 
-- `CHANGELOG.md`
-- `RELEASE_NOTES.md`
-- `README.md`
+## 2. Android release build
 
-### 3. 通常pushでCI確認
+```bash
+./tools/build_android.sh
+```
 
-Releaseを出す前に、一度通常のcommitでActionsが全成功することを確認します。
+`BUILD_ANDROID=PASS` を確認します。
 
-### 4. 最終commit
+## 3. 出力確認
 
-commit messageに **[release]** を含めます。
+```bash
+sha256sum build/PineCreek-Godot-v0.7.0-alpha1.apk
+```
 
-例:
+署名鍵は `~/.config/pinecreek/` 等のリポジトリ外に保存し、絶対にcommitしません。
+
+## 4. Git
+
+ソース、GLB、Blenderソース、ドキュメントをcommitします。  
+`godot/build/` と `godot/.godot/` はcommitしません。
+
+## 5. GitHub Release
+
+tagとReleaseを作り、以下をAssetsへ添付します。
 
 ```text
-[release] Pine Creek v0.6.0
+PineCreek-Godot-v0.7.0-alpha1.apk
+pine_creek_keyart.png
 ```
 
-このpushでActionsがテスト・ビルド・検証した後、自動的にGitHub Releaseへ
+Release本文には `RELEASE_NOTES.md` の内容を使用します。
 
-```text
-PineCreek-v0.6.0.apk
-```
+## Legacy CI
 
-をアップロードします。
-
-### 5. 手動再公開
-
-Actionsの **Run workflow** でもRelease publish stepが実行されます。
-
-## APK確認項目
-
-最低限:
-
-- 新規インストール
-- タイトル画面
-- 前進
-- 左右ステアリング
-- バック
-- ブレーキ
-- 復帰
-- ストーリー開始
-- セーブ / ロード
-- 音
-- アイコン
-
-CIでは実機タッチ操作までは再現できないため、最終的な操作感は実機テストも必要です。
-
-## 署名について
-
-Releasesへ出すAPKは現在 **debug signed APK** です。
-
-GitHub Actions cacheでdebug keystoreを維持し、v0.6以降のCIビルド同士では上書きインストールしやすくしています。
-
-Google Playへ公開する場合はrelease keystoreをGitHub Secrets等で安全に管理する別の署名フローを用意してください。
-
-秘密鍵をリポジトリへcommitしないでください。
+既存の `.github/workflows/build-apk.yml` はJava/OpenGL legacy版の確認用です。Godot版の正式リリースAPKをこのworkflowから作る必要はありません。

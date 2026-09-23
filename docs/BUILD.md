@@ -1,101 +1,140 @@
-# Build Guide
+# Build Guide — Godot版
 
-## 普通に遊ぶだけなら
+現在の主開発版は `godot/` です。GitHub Actionsは必須ではなく、Linuxから直接APKを生成できます。
 
-GitHubの **Releases** から最新のAPKをダウンロードしてください。
+## 検証済み環境
 
-```text
-PineCreek-v0.6.3.apk
-```
+- Godot 4.7.2 stable
+- Blender 4.5 LTS系
+- OpenJDK 17
+- Android SDK Platform 36
+- Android Build Tools 36.0.0
+- Android command-line tools
+- Zorin OS / Ubuntu系Linux
 
-APKをAndroidで開けばインストールできます。
+## 1. GodotとAndroid SDK
 
-## GitHub Actionsでビルド
-
-1. リポジトリをforkまたはclone
-2. 変更をpush
-3. GitHubの **Actions** を開く
-4. **Build Pine Creek APK** を開く
-5. 緑のチェックになるまで待つ
-6. 実行画面の **Artifacts** からAPKを取得
-
-Workflow:
-
-```text
-.github/workflows/build-apk.yml
-```
-
-push時に自動実行されます。
-
-## CIで自動確認する内容
-
-- Java 17
-- `VehiclePhysicsSelfTest`
-- Android SDK 35
-- 安定したdebug署名鍵
-- Gradle build
-- `apksigner verify`
-- `aapt dump badging`
-- package名 `com.pinecreek.game`
-- APK artifact
-
-## 車両物理テストだけ実行
-
-JDK 17があればAndroid SDKなしで実行できます。
+Godot実行ファイルはPATHへ置くか、`GODOT_BIN`で指定できます。
 
 ```bash
-rm -rf build/physics-test
-mkdir -p build/physics-test
-
-javac -encoding UTF-8 -d build/physics-test \
-  app/src/main/java/com/pinecreek/game/VehiclePhysics.java \
-  tools/VehiclePhysicsSelfTest.java
-
-java -cp build/physics-test com.pinecreek.game.VehiclePhysicsSelfTest
+export GODOT_BIN="$HOME/.local/bin/godot"
+export ANDROID_HOME="$HOME/Android/Sdk"
 ```
 
-## ローカルAndroidビルド
-
-必要なもの:
-
-- JDK 17
-- Android SDK Platform 35
-- Android Build Tools 35.0.0
-- GradleはWrapperで8.11.1を取得
+Android側には最低限以下を用意します。
 
 ```bash
-sdkmanager --licenses
-sdkmanager "platforms;android-35" "build-tools;35.0.0"
-./gradlew --no-daemon :app:assembleDebug :app:lintDebug
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 ```
 
-APK:
+JDKは17を使用します。
+
+## 2. プロジェクトを開く
+
+```bash
+cd PineCreekGame/godot
+godot --editor project.godot
+```
+
+## 3. 自動テスト
+
+```bash
+godot --headless --path . --script res://tests/run_tests.gd
+```
+
+現在の回帰テスト:
+
+- 2本指アクセル + 左
+- 2本指アクセル + 右
+- 片方の指を離しても別操作を保持
+- 車体方向への前進
+- 車体後方へのバック
+- デジタルステアが瞬時にフルロックしないこと
+- 左操作で左、右操作で右へ曲がること
+- 左右応答が極端に非対称でないこと
+
+## 4. Zorin/Linux上の実描画QA
+
+```bash
+./tools/qa_native.sh
+```
+
+このスクリプトはテスト後、X11/Xwayland上でゲームを実描画して、
+
+- 直進
+- 左旋回
+- バック
+- タイトル画面
+
+を `godot/build/*.png` へ保存します。
+
+VMware上ではAndroid EmulatorのSwiftShaderに制約があるため、**画面品質のQAはZorinネイティブGodot描画を基準**にしています。
+
+## 5. Android署名鍵
+
+release keystoreはリポジトリへcommitしません。
+
+標準では以下を読みます。
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+~/.config/pinecreek/android-release.env
 ```
 
-## Android Studio
+必要な環境変数:
 
-1. Android Studioでリポジトリルートを開く
-2. Gradle Sync
-3. SDK 35が無ければSDK Managerから導入
-4. `app` configurationを実行
+```bash
+export GODOT_ANDROID_KEYSTORE_RELEASE_PATH=/path/to/release.keystore
+export GODOT_ANDROID_KEYSTORE_RELEASE_USER=pinecreek
+export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=your-secret
+```
 
-## よくある問題
+## 6. release APKを作る
 
-### 旧版から更新できない
+```bash
+./tools/build_android.sh
+```
 
-v0.5以前のGitHub Actions製debug APKは、runnerごとにdebug署名が異なっていた可能性があります。
+成功時は最後に `BUILD_ANDROID=PASS` が出ます。
 
-v0.6以降はActions cacheでdebug keystoreを維持します。
-v0.5以前から一度だけ更新に失敗する場合は、旧版をアンインストールしてからv0.6を入れてください。
+生成物:
 
-### sdkmanagerでpackageが見つからない
+```text
+godot/build/PineCreek-Godot-v0.7.0-alpha1.apk
+godot/build/PineCreek-Godot-v0.7.0-alpha1.apk.sha256
+godot/build/apk-manifest-summary.txt
+```
 
-古い `tools` packageを明示的に入れないでください。
-Workflowはrunnerのcmdline-toolsにある `sdkmanager` を直接利用します。
+スクリプトは `apksigner` と `apkanalyzer` を使い、
 
-### Javaバージョン
+- APK署名
+- application ID
+- versionCode / versionName
+- minSdk / targetSdk
 
-AGP 8.9系ではJDK 17を使用してください。
+を確認します。
+
+## 7. 3Dモデルを作り直す
+
+編集用Blend:
+
+```text
+art-source/vehicles/pine_creek_pickup.blend
+```
+
+モデル生成スクリプト:
+
+```bash
+blender -b --python godot/tools/build_pickup.py
+```
+
+出力GLB:
+
+```text
+godot/assets/vehicles/pine_creek_pickup.glb
+```
+
+## 8. GitHub Actionsについて
+
+`.github/workflows/build-apk.yml` は旧Java/OpenGL版の回帰確認用です。Godot版は現在ローカルbuild/QAを正式経路としています。
+
+将来CIをGodot版へ移す場合も、release keystoreやパスワードをリポジトリへ直接置かないでください。

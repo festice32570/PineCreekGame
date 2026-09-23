@@ -1,8 +1,18 @@
-name: Build Pine Creek APK
+[Reading 155 lines from start (total: 155 lines, 0 remaining)]
+
+name: Legacy Java APK CI
 
 on:
   push:
     branches: [ "main", "master" ]
+    paths:
+      - "app/**"
+      - "tools/**"
+      - "gradle/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 
 permissions:
@@ -133,23 +143,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: v0.6.3
-          APK: PineCreek-v0.6.3.apk
-          KEYART: pine-creek-keyart.jpg
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" "$KEYART" --clobber
-            gh release edit "$TAG" \
-              --title "Pine Creek v0.6.3 - Handling & QA Pass" \
-              --notes-file RELEASE_NOTES.md
-          else
-            gh release create "$TAG" "$APK" "$KEYART" \
-              --target "$GITHUB_SHA" \
-              --title "Pine Creek v0.6.3 - Handling & QA Pass" \
-              --notes-file RELEASE_NOTES.md
-          fi
