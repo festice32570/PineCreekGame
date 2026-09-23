@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -94,14 +95,14 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
         dialogue = panelText(18, 0xEE151A1D);
         dialogue.setVisibility(View.GONE);
-        dialogue.setMaxLines(4);
+        dialogue.setMaxLines(3);
         dialogue.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
         FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(
                 (int)(getResources().getDisplayMetrics().widthPixels * .64f),
                 -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         // Keep dialogue completely above the touch controls.
         // Using density-aware spacing avoids overlap on small/high-DPI phones.
-        dp.bottomMargin = dp(88);
+        dp.bottomMargin = dp(132);
         root.addView(dialogue, dp);
 
         setGameUi(false);
@@ -160,35 +161,43 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
     private void buildTitle() {
         titleOverlay = new FrameLayout(this);
-        titleOverlay.setBackgroundColor(0x8D0B1318);
+        titleOverlay.setBackgroundColor(Color.BLACK);
 
-        LinearLayout card = menuCard();
+        // User-supplied Pine Creek key art. FIT_CENTER keeps the whole artwork
+        // visible in landscape instead of cropping away the logo/truck/turkey.
+        ImageView art = new ImageView(this);
+        art.setImageResource(R.drawable.pine_creek_keyart);
+        art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        art.setBackgroundColor(Color.BLACK);
+        titleOverlay.addView(art, new FrameLayout.LayoutParams(-1, -1));
 
-        TextView title = new TextView(this);
-        title.setText("PINE CREEK\n冬の町");
-        title.setTextColor(Color.WHITE);
-        title.setGravity(Gravity.CENTER);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setTextSize(34);
-        card.addView(title);
+        // Slight dark veil only at the bottom so buttons stay readable while
+        // leaving the supplied artwork itself clearly visible.
+        View bottomShade = new View(this);
+        bottomShade.setBackgroundColor(0x66000000);
+        FrameLayout.LayoutParams shadeLp = new FrameLayout.LayoutParams(
+                -1, dp(82), Gravity.BOTTOM);
+        titleOverlay.addView(bottomShade, shadeLp);
 
-        TextView sub = new TextView(this);
-        sub.setText("人口は少ない。トラックは多い。常識は春まで雪の下。");
-        sub.setTextColor(0xFFE0E5E7);
-        sub.setTextSize(15);
-        sub.setGravity(Gravity.CENTER);
-        sub.setPadding(0, 8, 0, 18);
-        card.addView(sub);
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.HORIZONTAL);
+        menu.setGravity(Gravity.CENTER);
+        menu.setPadding(dp(10), dp(8), dp(10), dp(8));
 
-        Button newGame = menuButton("ストーリーを選ぶ");
-        continueButton = menuButton("続きから");
-        Button free = menuButton("自由走行");
-        Button how = menuButton("遊び方");
+        Button newGame = gameButton("ストーリー");
+        continueButton = gameButton("続きから");
+        Button free = gameButton("自由走行");
+        Button how = gameButton("遊び方");
 
-        card.addView(newGame);
-        card.addView(continueButton);
-        card.addView(free);
-        card.addView(how);
+        Button[] buttons = { newGame, continueButton, free, how };
+        for (Button b : buttons) {
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
+                    0, dp(58), 1f);
+            bp.leftMargin = dp(5);
+            bp.rightMargin = dp(5);
+            b.setLayoutParams(bp);
+            menu.addView(b);
+        }
 
         newGame.setOnClickListener(v -> {
             titleOverlay.setVisibility(View.GONE);
@@ -198,15 +207,18 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         free.setOnClickListener(v -> startCampaign(GameRenderer.CAMPAIGN_FREE));
         how.setOnClickListener(v -> Toast.makeText(
                 this,
-                "左・右：ハンドル\nアクセル：前進　バック：後退\nブレーキ：減速・停止\n復帰：最後に安全だった道路へ戻る\n黄色い印でアクション\n雪原は滑りやすく、速度も落ちます。\n警笛は住民と七面鳥に効きます。",
+                "左・右：ハンドル\nアクセル：前進　バック：後退\nブレーキ：減速・停止\n復帰：最後に安全だった道路へ戻る\n黄色い印でアクション\n旋回時は車が先に画面内を動き、カメラは遅れて追従します。\n雪原は滑りやすく、速度も落ちます。",
                 Toast.LENGTH_LONG).show());
 
         continueButton.setEnabled(prefs.getBoolean("has_save", false));
 
-        FrameLayout.LayoutParams cardLp = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .52f),
-                -2, Gravity.CENTER);
-        titleOverlay.addView(card, cardLp);
+        FrameLayout.LayoutParams menuLp = new FrameLayout.LayoutParams(
+                -1, dp(74), Gravity.BOTTOM);
+        menuLp.leftMargin = dp(12);
+        menuLp.rightMargin = dp(12);
+        menuLp.bottomMargin = dp(4);
+        titleOverlay.addView(menu, menuLp);
+
         root.addView(titleOverlay, new FrameLayout.LayoutParams(-1, -1));
     }
 
