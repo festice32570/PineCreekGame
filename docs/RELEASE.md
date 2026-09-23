@@ -1,6 +1,22 @@
 # Release Guide
 
-## 1. バージョンを更新
+## 通常の開発push
+
+mainへ通常のcommitをpushすると、
+
+- 車両物理セルフテスト
+- Android build
+- APK署名検証
+- package検証
+- Actions Artifact作成
+
+まで実行します。
+
+GitHub Releaseは作りません。
+
+## リリース確定
+
+### 1. バージョン更新
 
 `app/build.gradle`:
 
@@ -9,51 +25,62 @@ versionCode 6
 versionName '0.6.0'
 ```
 
-`versionCode` は必ず増やします。
+### 2. ドキュメント更新
 
-## 2. CHANGELOGを更新
+- `CHANGELOG.md`
+- `RELEASE_NOTES.md`
+- `README.md`
 
-`CHANGELOG.md` に以下を記載します。
+### 3. 通常pushでCI確認
 
-- Added
-- Changed
-- Fixed
+Releaseを出す前に、一度通常のcommitでActionsが全成功することを確認します。
 
-## 3. mainへmerge
+### 4. 最終commit
 
-Pull Requestをmainへmergeします。
+commit messageに **[release]** を含めます。
 
-## 4. GitHub Actionsを確認
+例:
 
-**Build Pine Creek APK** が成功することを確認します。
+```text
+[release] Pine Creek v0.6.0
+```
 
-## 5. APKを実機確認
+このpushでActionsがテスト・ビルド・検証した後、自動的にGitHub Releaseへ
+
+```text
+PineCreek-v0.6.0.apk
+```
+
+をアップロードします。
+
+### 5. 手動再公開
+
+Actionsの **Run workflow** でもRelease publish stepが実行されます。
+
+## APK確認項目
 
 最低限:
 
 - 新規インストール
-- 上書きインストール
 - タイトル画面
-- 全操作
-- バック走行
+- 前進
+- 左右ステアリング
+- バック
+- ブレーキ
+- 復帰
 - ストーリー開始
 - セーブ / ロード
 - 音
 - アイコン
 
-## 6. GitHub Release
+CIでは実機タッチ操作までは再現できないため、最終的な操作感は実機テストも必要です。
 
-例:
+## 署名について
 
-```text
-v0.5.0
-```
+Releasesへ出すAPKは現在 **debug signed APK** です。
 
-Release notesはCHANGELOGを元に作成し、Actionsで生成したAPKを添付します。
+GitHub Actions cacheでdebug keystoreを維持し、v0.6以降のCIビルド同士では上書きインストールしやすくしています。
 
-## 署名APKについて
-
-現在のWorkflowは開発用debug APKです。
-Google Play等へ公開する場合はrelease keystoreを安全なSecretsとして管理し、署名用Workflowを別途用意してください。
+Google Playへ公開する場合はrelease keystoreをGitHub Secrets等で安全に管理する別の署名フローを用意してください。
 
 秘密鍵をリポジトリへcommitしないでください。
