@@ -14,6 +14,10 @@ public final class VehiclePhysicsSelfTest {
         testTowingCapsSpeed();
         testSteeringReturnsToCenter();
         testFrameRateConsistency();
+        testThirtySixtyOneTwentyConsistency();
+        testReverseTopSpeed();
+        testSnowTurnsLessThanRoad();
+        testOpposedPedalsDoNotLaunch();
         testNoNaN();
         System.out.println("VehiclePhysicsSelfTest: " + passed + " tests passed");
     }
@@ -146,6 +150,64 @@ public final class VehiclePhysicsSelfTest {
         near(a.heading,b.heading,0.08f,"60/120 Hz heading diverged too much");
         near(a.x,b.x,0.65f,"60/120 Hz X diverged too much");
         near(a.z,b.z,0.65f,"60/120 Hz Z diverged too much");
+        pass();
+    }
+
+
+    private static void testThirtySixtyOneTwentyConsistency() {
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.throttle = true;
+        in.left = true;
+
+        VehiclePhysics.State a = new VehiclePhysics.State(0,0,0,0,0);
+        VehiclePhysics.State b = new VehiclePhysics.State(0,0,0,0,0);
+        VehiclePhysics.State c = new VehiclePhysics.State(0,0,0,0,0);
+
+        simulate(a,in,true,false,6f,1f/30f);
+        simulate(b,in,true,false,6f,1f/60f);
+        simulate(c,in,true,false,6f,1f/120f);
+
+        near(a.speed,c.speed,0.30f,"30/120 Hz speed diverged too much");
+        near(b.speed,c.speed,0.20f,"60/120 Hz speed diverged too much");
+        near(a.heading,c.heading,0.12f,"30/120 Hz heading diverged too much");
+        near(b.heading,c.heading,0.08f,"60/120 Hz heading diverged too much");
+        pass();
+    }
+
+    private static void testReverseTopSpeed() {
+        VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,0,0);
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.reverse = true;
+        simulate(s,in,true,false,30f,1f/120f);
+        check(s.speed >= -VehiclePhysics.ROAD_REVERSE_SPEED - 0.001f,
+                "reverse speed exceeded cap");
+        check(s.speed < -VehiclePhysics.ROAD_REVERSE_SPEED * 0.75f,
+                "reverse acceleration never approached cap");
+        pass();
+    }
+
+    private static void testSnowTurnsLessThanRoad() {
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.left = true;
+
+        VehiclePhysics.State road = new VehiclePhysics.State(0,0,0,10f,0);
+        VehiclePhysics.State snow = new VehiclePhysics.State(0,0,0,10f,0);
+
+        simulate(road,in,true,false,1f,1f/120f);
+        simulate(snow,in,false,false,1f,1f/120f);
+
+        check(Math.abs(road.heading) > Math.abs(snow.heading) + 0.08f,
+                "snow should have less yaw authority than road");
+        pass();
+    }
+
+    private static void testOpposedPedalsDoNotLaunch() {
+        VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,0,0);
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.throttle = true;
+        in.reverse = true;
+        simulate(s,in,true,false,2f,1f/120f);
+        near(s.speed,0f,0.001f,"throttle+reverse should not launch vehicle");
         pass();
     }
 
