@@ -66,8 +66,8 @@ Zorin上で実際に3D描画し、直進 / 左旋回 / バック / タイトル�
 
 ## タイトル画像
 
-`assets/ui/pine_creek_keyart.jpg` は提供された1254×1254画像を、解像度を変えずJPEG Q95 / 4:4:4へ形式変換したものです。画像生成による描き直しはしていません。
+`assets/ui/pine_creek_keyart.png` は提供された1254×1254の添付画像そのものを使用しています。再生成・描き直し・JPEG変換はしていません。
 
 SHA-256:
 
-`f1a78c378d91fe724d4e2ad437ca9cbd9306b8c614a9d7a5ad0114d3942a861c`
+`dd11256d952c29b28249640eaeae1edc25d2bf7c79eecc89ee3ce2072b834d6c`

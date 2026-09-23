@@ -24,7 +24,7 @@ source "$SECRETS"
 mkdir -p "$ROOT/build"
 cd "$ROOT"
 
-echo "[1/5] Import resources"
+echo "[1/5] Scan/import project metadata"
 "$GODOT" --headless --path . --import >/tmp/pine-godot-import.log 2>&1
 
 echo "[2/5] Godot regression tests"

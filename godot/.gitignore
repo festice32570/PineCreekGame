@@ -1,5 +1,3 @@
-[Reading 11 lines from start (total: 11 lines, 0 remaining)]
-
 # Godot generated/imported state
 .godot/
 build/
@@ -12,12 +10,8 @@ build/
 *.blend1
 *.blend2
 
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]
 # Godot-generated import metadata can be regenerated
 *.import
 
-# Local master copy of the user-provided key art; repository uses Q98 1254px JPEG
-assets/ui/pine_creek_keyart.png
-# Local key-art conversion intermediates
+# Local key-art conversion intermediates (the exact PNG is tracked)
 assets/ui/pine_creek_keyart_q*.jpg
-assets/ui/pine_creek_keyart.png

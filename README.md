@@ -1,6 +1,6 @@
 # Pine Creek: 冬の町
 
-![Pine Creek](godot/assets/ui/pine_creek_keyart.jpg)
+![Pine Creek](godot/assets/ui/pine_creek_keyart.png)
 
 雪に埋もれた架空の田舎町 **Pine Creek** を、古い架空のピックアップで走り回るAndroid向け3Dドライブゲームです。
 

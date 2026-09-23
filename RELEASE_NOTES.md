@@ -1,5 +1,7 @@
 # Pine Creek v0.7.0-alpha1 — Godot新物理版
 
+![Pine Creek](https://raw.githubusercontent.com/festice32570/PineCreekGame/main/godot/assets/ui/pine_creek_keyart.png)
+
 Pine CreekをJava + 自前OpenGL実装からGodotへ移行する最初の公開αです。
 
 ## 大きな変更
