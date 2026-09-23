@@ -102,5 +102,3 @@ v0.6.2では、指定キーアートが「参照だけ正しくて実ファイ�
 - APKを展開し、APK内の `pine_creek_keyart.jpg` のSHA-256がソースと一致すること
 
 タイトル画面とランチャーアイコンは同じ検証済みキーアートresourceを参照します。
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

@@ -1576,5 +1576,3 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         return (float)Math.sqrt(dx*dx+dz*dz);
     }
 }
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

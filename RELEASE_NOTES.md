@@ -52,5 +52,3 @@ Assets の **PineCreek-v0.6.3.apk** をAndroid端末へ入れて起動してく�
 ## License
 
 MIT License。コード・ストーリー・ゲームシステムの改変等ご自由にどうぞ。
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

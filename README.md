@@ -92,5 +92,3 @@ Android StudioなしでもGitHub Actionsでビルドできます。
 コードおよびリポジトリ内で配布するプロジェクト素材は、特記がない限り **MIT License** です。
 
 [LICENSE](LICENSE)
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

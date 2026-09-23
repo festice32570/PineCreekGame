@@ -92,5 +92,3 @@ exit /b %EXIT_CODE%
 if "%OS%"=="Windows_NT" endlocal
 
 :omega
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

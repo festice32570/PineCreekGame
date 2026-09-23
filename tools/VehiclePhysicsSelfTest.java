@@ -330,5 +330,3 @@ public final class VehiclePhysicsSelfTest {
         }
     }
 }
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

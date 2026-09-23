@@ -153,5 +153,3 @@ jobs:
               --title "Pine Creek v0.6.3 - Handling & QA Pass" \
               --notes-file RELEASE_NOTES.md
           fi
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

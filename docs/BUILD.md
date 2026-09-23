@@ -99,5 +99,3 @@ Workflowはrunnerのcmdline-toolsにある `sdkmanager` を直接利用します
 ### Javaバージョン
 
 AGP 8.9系ではJDK 17を使用してください。
-
-[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]
