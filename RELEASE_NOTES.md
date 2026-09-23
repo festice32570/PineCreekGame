@@ -1,28 +1,35 @@
-# Pine Creek v0.6.2 - Artwork Display Fix
+# Pine Creek v0.6.3 - Handling & QA Pass
 
-![Pine Creek 冬の町](https://github.com/festice32570/PineCreekGame/releases/download/v0.6.2/pine-creek-keyart.jpg)
+![Pine Creek 冬の町](https://github.com/festice32570/PineCreekGame/releases/download/v0.6.3/pine-creek-keyart.jpg)
 
 **APKをダウンロードしてインストールするだけで遊べます。**
 
-Assets の **PineCreek-v0.6.2.apk** をAndroid端末へ入れて起動してください。
+Assets の **PineCreek-v0.6.3.apk** をAndroid端末へ入れて起動してください。
 
 > 適当に作り始めた、だいぶ狂った雪国ドライブゲームです。  
 > バグチェックはしていますが、まだバグはあります。  
 > MIT Licenseなので、改変・fork・魔改造・再配布などご自由にどうぞ。
 
-## v0.6.2
+## v0.6.3
 
-v0.6.1でキーアートの実ファイルが正しく入っていなかった問題を修正しました。
+今回はZorin OS + Android 35 Emulator上で、実際にAPKを起動して画面を見ながら調整しました。
 
-- 添付されたPine Creek画像を**正しい実データで再登録**
-- 添付画像を転送時に欠損しない256×256 JPEGへリサイズして使用
-- タイトル画面・アプリアイコン・README・Releaseで同じ検証済み画像を使用
-- GitHub READMEとReleaseにも同じキーアートを使用
-- CIで画像の**JPEG形式・256×256寸法・ファイルサイズ・SHA-256**を検証
-- APKをZIPとして展開し、**APK内に入った画像そのもののSHA-256まで一致確認**
-- v0.6.1のカメラ・車両挙動・会話UI修正もそのまま維持
-
-これで「ソースには書いてあるのに、実際のAPKやReleaseには別画像・壊れた画像が入る」ケースをCIで検出できます。
+- 高速域のステアリングを再調整
+- 約53km/hで左/右を1秒保持しても道路外へ急激に飛び出しにくい挙動へ変更
+- 低速時は十分な舵角を残し、駐車速度の取り回しは維持
+- 速度依存ヨーダンピングを強化
+- 物理側自身が120Hz固定サブステップを担当
+- 53km/h・1秒操舵の横移動量を自動テストへ追加
+- 車両物理テスト **21件**
+- カメラ回帰テスト **5件**
+- Android Lint **No issues found**
+- Android 35 Emulatorでタイトル / ストーリー開始 / 前進 / 左旋回 / バック / バック旋回 / 復帰を実画面確認
+- 会話表示を操作ボタンから離して上部へ整理
+- タイトル画面のキーアート表示を改善
+- 提供画像からランチャー向け安全マージン付きアイコンを生成
+- Gradle Wrapper 8.11.1を追加し `./gradlew` で再現可能なビルドへ変更
+- GitHub ActionsでもLintをwarnings-as-errorsで実行
+- キーアート / アイコンのSHA-256とAPK内実データをCIで照合
 
 ## 操作
 
@@ -36,7 +43,7 @@ v0.6.1でキーアートの実ファイルが正しく入っていなかった�
 
 ## インストール
 
-1. Assets の `PineCreek-v0.6.2.apk` をダウンロード
+1. Assets の `PineCreek-v0.6.3.apk` をダウンロード
 2. AndroidでAPKを開く
 3. 必要な場合だけ「不明なアプリのインストール」を許可
 4. インストール
@@ -45,3 +52,5 @@ v0.6.1でキーアートの実ファイルが正しく入っていなかった�
 ## License
 
 MIT License。コード・ストーリー・ゲームシステムの改変等ご自由にどうぞ。
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

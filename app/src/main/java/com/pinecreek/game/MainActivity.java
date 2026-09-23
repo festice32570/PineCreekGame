@@ -1,5 +1,6 @@
 package com.pinecreek.game;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -75,7 +76,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
     private void buildHud() {
         hud = panelText(16, 0xC7152026);
-        FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
+        FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START);
         hp.setMargins(14, 14, 0, 0);
         root.addView(hud, hp);
 
@@ -89,20 +90,20 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
 
         chapter = panelText(14, 0xB51C252B);
         chapter.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.RIGHT);
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
         cp.setMargins(0, 14, 14, 0);
         root.addView(chapter, cp);
 
         dialogue = panelText(18, 0xEE151A1D);
         dialogue.setVisibility(View.GONE);
         dialogue.setMaxLines(3);
-        dialogue.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        dialogue.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(
                 (int)(getResources().getDisplayMetrics().widthPixels * .64f),
-                -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        // Keep dialogue completely above the touch controls.
-        // Using density-aware spacing avoids overlap on small/high-DPI phones.
-        dp.bottomMargin = dp(132);
+                -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        // Keep dialogue below the objective bar and away from the truck/controls.
+        // The left HUD ends before this centered panel begins on phone layouts.
+        dp.topMargin = dp(76);
         root.addView(dialogue, dp);
 
         setGameUi(false);
@@ -119,7 +120,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         leftPad.addView(right);
         leftPad.addView(horn);
 
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.LEFT | Gravity.BOTTOM);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.START | Gravity.BOTTOM);
         lp.setMargins(12, 0, 0, 12);
         root.addView(leftPad, lp);
 
@@ -138,7 +139,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         rightPad.addView(brake);
         rightPad.addView(accel);
 
-        FrameLayout.LayoutParams rp = new FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT | Gravity.BOTTOM);
+        FrameLayout.LayoutParams rp = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.BOTTOM);
         rp.setMargins(0, 0, 12, 12);
         root.addView(rightPad, rp);
 
@@ -163,12 +164,18 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         titleOverlay = new FrameLayout(this);
         titleOverlay.setBackgroundColor(Color.BLACK);
 
-        // User-supplied Pine Creek key art. FIT_CENTER keeps the whole artwork
-        // visible in landscape instead of cropping away the logo/truck/turkey.
+        // Fill the landscape side areas with the same supplied artwork, then
+        // draw a full uncropped copy over it. This avoids plain black bars while
+        // preserving the logo, truck and turkey exactly as provided.
+        ImageView backdrop = new ImageView(this);
+        backdrop.setImageResource(R.drawable.pine_creek_keyart);
+        backdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        backdrop.setAlpha(.34f);
+        titleOverlay.addView(backdrop, new FrameLayout.LayoutParams(-1, -1));
+
         ImageView art = new ImageView(this);
         art.setImageResource(R.drawable.pine_creek_keyart);
         art.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        art.setBackgroundColor(Color.BLACK);
         titleOverlay.addView(art, new FrameLayout.LayoutParams(-1, -1));
 
         // Slight dark veil only at the bottom so buttons stay readable while
@@ -437,11 +444,14 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         return b;
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void bindHold(Button b, int control) {
         b.setOnTouchListener((v, e) -> {
-            boolean down = e.getActionMasked() != MotionEvent.ACTION_UP
-                    && e.getActionMasked() != MotionEvent.ACTION_CANCEL;
+            int action = e.getActionMasked();
+            boolean down = action != MotionEvent.ACTION_UP
+                    && action != MotionEvent.ACTION_CANCEL;
             game.renderer.control(control, down);
+            if (action == MotionEvent.ACTION_UP) v.performClick();
             return true;
         });
     }
@@ -460,7 +470,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
     @Override
     public void onDialogue(String speaker, String line) {
         runOnUiThread(() -> {
-            dialogue.setText(speaker + "\n" + line);
+            dialogue.setText(getString(R.string.dialogue_format, speaker, line));
             dialogue.setVisibility(View.VISIBLE);
             audio.event();
 
@@ -521,3 +531,5 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         if (audio != null) audio.release();
     }
 }
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

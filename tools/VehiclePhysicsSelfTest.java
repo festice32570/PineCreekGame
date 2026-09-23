@@ -17,6 +17,9 @@ public final class VehiclePhysicsSelfTest {
         testThirtySixtyOneTwentyConsistency();
         testReverseTopSpeed();
         testSnowTurnsLessThanRoad();
+        testHighSpeedSteeringIsStable();
+        testRoadSpeedOneSecondTurnStaysControlled();
+        testLowSpeedStillManeuvers();
         testOpposedPedalsDoNotLaunch();
         testCameraDeadZoneDoesNotRotateScreenImmediately();
         testCameraRecentersAfterSteering();
@@ -204,6 +207,50 @@ public final class VehiclePhysicsSelfTest {
         pass();
     }
 
+    private static void testHighSpeedSteeringIsStable() {
+        VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,18f,0);
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.right = true;
+        simulate(s,in,true,false,1f,1f/120f);
+
+        float degrees = (float)Math.toDegrees(Math.abs(s.heading));
+        check(degrees > 5f,
+                "high-speed steering became too weak: " + degrees);
+        check(degrees < 24f,
+                "high-speed steering still snaps vehicle sideways: " + degrees);
+        pass();
+    }
+
+    private static void testRoadSpeedOneSecondTurnStaysControlled() {
+        // 14.7 m/s is about 53 km/h, matching the emulator regression case
+        // that previously threw the truck from the road into a front yard.
+        VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,14.7f,0);
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.left = true;
+        simulate(s,in,true,false,1f,1f/120f);
+
+        float degrees = (float)Math.toDegrees(Math.abs(s.heading));
+        check(degrees < 16f,
+                "53 km/h one-second steering rotated too far: " + degrees);
+        check(Math.abs(s.x) < 2.5f,
+                "53 km/h one-second steering moved too far sideways: " + s.x);
+        check(s.z < -10f,
+                "vehicle stopped making forward progress during steering");
+        pass();
+    }
+
+    private static void testLowSpeedStillManeuvers() {
+        VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,5f,0);
+        VehiclePhysics.Input in = new VehiclePhysics.Input();
+        in.right = true;
+        simulate(s,in,true,false,1f,1f/120f);
+
+        float degrees = (float)Math.toDegrees(Math.abs(s.heading));
+        check(degrees > 22f,
+                "low-speed steering became too weak: " + degrees);
+        pass();
+    }
+
     private static void testOpposedPedalsDoNotLaunch() {
         VehiclePhysics.State s = new VehiclePhysics.State(0,0,0,0,0);
         VehiclePhysics.Input in = new VehiclePhysics.Input();
@@ -283,3 +330,5 @@ public final class VehiclePhysicsSelfTest {
         }
     }
 }
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

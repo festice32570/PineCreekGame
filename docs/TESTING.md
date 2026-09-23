@@ -1,6 +1,6 @@
 # Testing
 
-Pine Creek v0.6.0では、車両挙動とAPK生成をGitHub Actionsで自動確認します。
+Pine Creek v0.6.3では、車両挙動・カメラ・Lint・APK生成をGitHub ActionsとローカルAndroid Emulatorで確認します。
 
 ## 自動テスト
 
@@ -22,6 +22,8 @@ Pine Creek v0.6.0では、車両挙動とAPK生成をGitHub Actionsで自動確�
 - 深雪では圧雪路より旋回authorityが低い
 - アクセルとバック同時押しで突然発進しない
 - 1万stepのランダム入力でNaN / Infinityが発生しない
+- 約53km/hで1秒操舵してもheadingが16°未満
+- 同条件の横移動量が2.5m未満
 
 ## Androidビルド検証
 
@@ -100,3 +102,5 @@ v0.6.2では、指定キーアートが「参照だけ正しくて実ファイ�
 - APKを展開し、APK内の `pine_creek_keyart.jpg` のSHA-256がソースと一致すること
 
 タイトル画面とランチャーアイコンは同じ検証済みキーアートresourceを参照します。
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

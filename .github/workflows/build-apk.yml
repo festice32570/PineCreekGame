@@ -26,7 +26,7 @@ jobs:
         run: |
           rm -rf build/logic-test
           mkdir -p build/logic-test
-          javac -d build/logic-test \
+          javac -encoding UTF-8 -d build/logic-test \
             app/src/main/java/com/pinecreek/game/VehiclePhysics.java \
             app/src/main/java/com/pinecreek/game/ChaseCameraMath.java \
             tools/VehiclePhysicsSelfTest.java \
@@ -38,15 +38,21 @@ jobs:
         shell: bash
         run: |
           test -f app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg
+          test -f app/src/main/res/drawable-nodpi/pine_creek_icon.png
           test -f docs/pine_creek_keyart.jpg
           test -f docs/pine_creek_release.jpg
+          test -f docs/pine_creek_icon.png
           test "$(stat -c%s app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg)" -eq 14156
           file app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg | tee build/keyart-file.txt
           grep -q "JPEG image data" build/keyart-file.txt
           grep -q "256x256" build/keyart-file.txt
           echo "54badc9d9efd5576d00befd0a788ce19b42941c94bb816662ce70164923ef0bf  app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg" | sha256sum -c -
+          echo "9b392ccf1abf96953ffd12d13dc375ea1f082badcd6cbefdaaf738defd58a027  app/src/main/res/drawable-nodpi/pine_creek_icon.png" | sha256sum -c -
+          file app/src/main/res/drawable-nodpi/pine_creek_icon.png | tee build/icon-file.txt
+          grep -q "PNG image data, 432 x 432" build/icon-file.txt
           cmp app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg docs/pine_creek_keyart.jpg
           cmp app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg docs/pine_creek_release.jpg
+          cmp app/src/main/res/drawable-nodpi/pine_creek_icon.png docs/pine_creek_icon.png
 
       - name: Android SDK 35
         shell: bash
@@ -78,13 +84,11 @@ jobs:
               -validity 10000
           fi
 
-      - name: Gradle 8.11.1
+      - name: Gradle cache
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
 
-      - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
+      - name: Build and lint
+        run: ./gradlew --no-daemon :app:assembleDebug :app:lintDebug
 
       - name: Verify APK, package and embedded artwork
         shell: bash
@@ -94,29 +98,35 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee build/apk-badging.txt
           grep -q "package: name='com.pinecreek.game'" build/apk-badging.txt
-          grep -q "versionCode='8'" build/apk-badging.txt
-          grep -q "versionName='0.6.2'" build/apk-badging.txt
+          grep -q "versionCode='9'" build/apk-badging.txt
+          grep -q "versionName='0.6.3'" build/apk-badging.txt
 
           KEYART_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_keyart\.jpg$' | head -n 1)"
+          ICON_ENTRY="$(zipinfo -1 "$APK" | grep -E '(^|/)pine_creek_icon\.png$' | head -n 1)"
           test -n "$KEYART_ENTRY"
+          test -n "$ICON_ENTRY"
 
           EXPECTED_KEYART="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_keyart.jpg | awk '{print $1}')"
+          EXPECTED_ICON="$(sha256sum app/src/main/res/drawable-nodpi/pine_creek_icon.png | awk '{print $1}')"
           unzip -p "$APK" "$KEYART_ENTRY" > build/apk-pine-creek-keyart.jpg
+          unzip -p "$APK" "$ICON_ENTRY" > build/apk-pine-creek-icon.png
           APK_KEYART="$(sha256sum build/apk-pine-creek-keyart.jpg | awk '{print $1}')"
+          APK_ICON="$(sha256sum build/apk-pine-creek-icon.png | awk '{print $1}')"
           test "$EXPECTED_KEYART" = "$APK_KEYART"
+          test "$EXPECTED_ICON" = "$APK_ICON"
           file build/apk-pine-creek-keyart.jpg | tee build/apk-keyart-file.txt
           grep -q "JPEG image data" build/apk-keyart-file.txt
           grep -q "256x256" build/apk-keyart-file.txt
 
-          cp "$APK" PineCreek-v0.6.2.apk
+          cp "$APK" PineCreek-v0.6.3.apk
           cp docs/pine_creek_release.jpg pine-creek-keyart.jpg
 
       - name: Upload CI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PineCreekGame-v062-debug
+          name: PineCreekGame-v063-debug
           path: |
-            PineCreek-v0.6.2.apk
+            PineCreek-v0.6.3.apk
             pine-creek-keyart.jpg
           if-no-files-found: error
           retention-days: 30
@@ -126,18 +136,20 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v0.6.2
-          APK: PineCreek-v0.6.2.apk
+          TAG: v0.6.3
+          APK: PineCreek-v0.6.3.apk
           KEYART: pine-creek-keyart.jpg
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK" "$KEYART" --clobber
             gh release edit "$TAG" \
-              --title "Pine Creek v0.6.2 - Artwork Display Fix" \
+              --title "Pine Creek v0.6.3 - Handling & QA Pass" \
               --notes-file RELEASE_NOTES.md
           else
             gh release create "$TAG" "$APK" "$KEYART" \
               --target "$GITHUB_SHA" \
-              --title "Pine Creek v0.6.2 - Artwork Display Fix" \
+              --title "Pine Creek v0.6.3 - Handling & QA Pass" \
               --notes-file RELEASE_NOTES.md
           fi
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

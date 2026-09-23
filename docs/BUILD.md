@@ -5,7 +5,7 @@
 GitHubの **Releases** から最新のAPKをダウンロードしてください。
 
 ```text
-PineCreek-v0.6.0.apk
+PineCreek-v0.6.3.apk
 ```
 
 APKをAndroidで開けばインストールできます。
@@ -47,7 +47,7 @@ JDK 17があればAndroid SDKなしで実行できます。
 rm -rf build/physics-test
 mkdir -p build/physics-test
 
-javac -d build/physics-test \
+javac -encoding UTF-8 -d build/physics-test \
   app/src/main/java/com/pinecreek/game/VehiclePhysics.java \
   tools/VehiclePhysicsSelfTest.java
 
@@ -61,12 +61,12 @@ java -cp build/physics-test com.pinecreek.game.VehiclePhysicsSelfTest
 - JDK 17
 - Android SDK Platform 35
 - Android Build Tools 35.0.0
-- Gradle 8.11.1
+- GradleはWrapperで8.11.1を取得
 
 ```bash
 sdkmanager --licenses
 sdkmanager "platforms;android-35" "build-tools;35.0.0"
-gradle --no-daemon :app:assembleDebug
+./gradlew --no-daemon :app:assembleDebug :app:lintDebug
 ```
 
 APK:
@@ -99,3 +99,5 @@ Workflowはrunnerのcmdline-toolsにある `sdkmanager` を直接利用します
 ### Javaバージョン
 
 AGP 8.9系ではJDK 17を使用してください。
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

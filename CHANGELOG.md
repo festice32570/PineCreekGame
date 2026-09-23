@@ -1,4 +1,30 @@
+[Reading 49 lines from start (total: 49 lines, 0 remaining)]
+
 # Changelog
+
+## 0.6.3 - 2026-09-23
+
+### Added
+- Gradle Wrapper 8.11.1
+- 53km/h・1秒操舵の横移動量回帰テスト
+- ランチャー向け安全マージン付き432×432 PNGアイコン
+- Android 35 Emulatorによる実画面QA手順
+
+### Changed
+- 高速域の最大舵角を大幅に抑制
+- 高速域のヨー応答を速度依存でさらに安定化
+- 物理120Hzサブステップを `VehiclePhysics` 側へ集約
+- 会話表示を上部へ移動し操作ボタンとの重なりを解消
+- タイトル画面のキーアート表示を改善
+- CIをGradle Wrapperベースへ変更
+- Android Lintをwarnings-as-errorsで実行
+
+### Fixed
+- 50km/h台で1秒ハンドルを保持すると道路外へ急激に飛び出す問題
+- 一部端末で会話表示が操作部と競合しやすい問題
+- ローカルJDK環境でUTF-8テストソースが失敗する問題
+- 旧ランチャーアイコンresourceの残骸
+
 
 ## 0.6.2 - 2026-09-23
 
@@ -47,3 +73,7 @@
 - オープンソース公開向けドキュメント
 - MIT License
 - ランダム町内イベント
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

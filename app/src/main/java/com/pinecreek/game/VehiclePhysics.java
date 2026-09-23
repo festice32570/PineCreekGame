@@ -50,8 +50,20 @@ public final class VehiclePhysics {
 
     public static void step(State s, Input in, boolean road, boolean towing, float dt) {
         if (dt <= 0f) return;
-        dt = Math.min(dt, 0.05f);
 
+        // Keep integration deterministic across 30/60/120 Hz callers and
+        // occasional long frames. Physics owns the fixed sub-step so every
+        // caller gets the same behavior.
+        float remaining = Math.min(dt, 0.10f);
+        while (remaining > 0f) {
+            float h = Math.min(remaining, 1f / 120f);
+            stepSubstep(s, in, road, towing, h);
+            remaining -= h;
+        }
+    }
+
+    private static void stepSubstep(
+            State s, Input in, boolean road, boolean towing, float dt) {
         final float absSpeed = Math.abs(s.speed);
         final float forwardLimit = towing
                 ? TOW_TOP_SPEED
@@ -63,14 +75,25 @@ public final class VehiclePhysics {
         float steerInput = (in.left ? -1f : 0f) + (in.right ? 1f : 0f);
 
         float speedRatio = clamp(absSpeed / Math.max(1f, forwardLimit), 0f, 1f);
-        float maxSteerDeg = lerp(34f, 10.5f, smoothStep(speedRatio));
-        if (!road) maxSteerDeg *= 0.86f;
-        if (towing) maxSteerDeg *= 0.82f;
+        // Arcade-racer steering curve. Digital touch buttons need far less
+        // lock at road speed than a real steering wheel input would imply.
+        float maxSteerDeg;
+        if (absSpeed <= 4f) {
+            maxSteerDeg = 30f;
+        } else if (absSpeed <= 10f) {
+            maxSteerDeg = lerp(30f, 12f, (absSpeed - 4f) / 6f);
+        } else {
+            maxSteerDeg = lerp(12f, 3.5f, clamp((absSpeed - 10f) / 10f, 0f, 1f));
+        }
+        if (!road) maxSteerDeg *= 0.80f;
+        if (towing) maxSteerDeg *= 0.76f;
 
         float targetSteer = (float)Math.toRadians(maxSteerDeg) * steerInput;
 
-        float steerRateDeg = lerp(120f, 72f, speedRatio);
-        float returnRateDeg = lerp(155f, 100f, speedRatio);
+        // Slower rack response at speed stops a one-second button hold from
+        // becoming an emergency full-lock turn.
+        float steerRateDeg = lerp(112f, 30f, speedRatio);
+        float returnRateDeg = lerp(150f, 86f, speedRatio);
         float rate = (float)Math.toRadians(steerInput == 0f ? returnRateDeg : steerRateDeg);
         s.steer = moveToward(s.steer, targetSteer, rate * dt);
 
@@ -107,9 +130,11 @@ public final class VehiclePhysics {
         s.speed = clamp(s.speed, -reverseLimit, forwardLimit);
 
         if (Math.abs(s.speed) > 0.08f) {
-            float surfaceGrip = road ? 1.0f : 0.68f;
-            float highSpeedStability = lerp(1.0f, 0.62f, smoothStep(speedRatio));
-            float towStability = towing ? 0.82f : 1.0f;
+            float surfaceGrip = road ? 1.0f : 0.62f;
+            // Strong speed-sensitive yaw damping. Around 50 km/h this is about
+            // 0.30, giving a controlled lane-change arc instead of a snap turn.
+            float highSpeedStability = 1f / (1f + 6f * speedRatio * speedRatio);
+            float towStability = towing ? 0.78f : 1.0f;
 
             float yawRate = (s.speed / WHEELBASE)
                     * (float)Math.tan(s.steer)
@@ -117,7 +142,7 @@ public final class VehiclePhysics {
                     * highSpeedStability
                     * towStability;
 
-            float maxYaw = (float)Math.toRadians(82f);
+            float maxYaw = (float)Math.toRadians(56f);
             yawRate = clamp(yawRate, -maxYaw, maxYaw);
 
             float midHeading = s.heading + yawRate * dt * 0.5f;
@@ -161,3 +186,5 @@ public final class VehiclePhysics {
         return Math.max(lo, Math.min(hi, v));
     }
 }
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]

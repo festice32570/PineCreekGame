@@ -475,14 +475,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         input.throttle = accel && fuel > 0f;
         input.reverse = reverse && fuel > 0f;
 
-        // Split long render frames into short physics steps to keep turning
-        // consistent at 30/60/120 Hz and during occasional frame drops.
-        float physicsRemaining = dt;
-        while (physicsRemaining > 0f) {
-            float step = Math.min(physicsRemaining, 1f / 120f);
-            VehiclePhysics.step(physics, input, road, towingMode != 0, step);
-            physicsRemaining -= step;
-        }
+        // VehiclePhysics owns the fixed 120 Hz sub-stepping so renderer
+        // frame rate does not change steering/acceleration behavior.
+        VehiclePhysics.step(physics, input, road, towingMode != 0, dt);
 
         px = physics.x;
         pz = physics.z;
@@ -1581,3 +1576,5 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         return (float)Math.sqrt(dx*dx+dz*dz);
     }
 }
+
+[executed on device: festice-virtual-machine (07fc5208-706b-4ca8-850a-ef91db884468)]
