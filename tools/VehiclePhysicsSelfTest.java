@@ -18,6 +18,9 @@ public final class VehiclePhysicsSelfTest {
         testReverseTopSpeed();
         testSnowTurnsLessThanRoad();
         testOpposedPedalsDoNotLaunch();
+        testCameraDeadZoneDoesNotRotateScreenImmediately();
+        testCameraRecentersAfterSteering();
+        testCameraRemainsFinite();
         testNoNaN();
         System.out.println("VehiclePhysicsSelfTest: " + passed + " tests passed");
     }
@@ -208,6 +211,42 @@ public final class VehiclePhysicsSelfTest {
         in.reverse = true;
         simulate(s,in,true,false,2f,1f/120f);
         near(s.speed,0f,0.001f,"throttle+reverse should not launch vehicle");
+        pass();
+    }
+
+
+    private static void testCameraDeadZoneDoesNotRotateScreenImmediately() {
+        float camera = 0f;
+        float vehicle = (float)Math.toRadians(6f);
+        float steer = (float)Math.toRadians(12f);
+        for (int i=0; i<60; i++) {
+            camera = ChaseCameraMath.updateHeading(vehicle,camera,steer,8f,1f/60f);
+        }
+        near(camera,0f,(float)Math.toRadians(.15f),
+                "camera should stay almost fixed while vehicle turns inside dead zone");
+        pass();
+    }
+
+    private static void testCameraRecentersAfterSteering() {
+        float camera = 0f;
+        float vehicle = (float)Math.toRadians(25f);
+        float steer = 0f;
+        for (int i=0; i<180; i++) {
+            camera = ChaseCameraMath.updateHeading(vehicle,camera,steer,10f,1f/60f);
+        }
+        near(camera,vehicle,(float)Math.toRadians(1.0f),
+                "camera did not gently recenter after steering released");
+        pass();
+    }
+
+    private static void testCameraRemainsFinite() {
+        float camera = 0f;
+        for (int i=0; i<10000; i++) {
+            float vehicle = (float)Math.sin(i*.017f) * 3.0f;
+            float steer = (float)Math.sin(i*.11f) * .5f;
+            camera = ChaseCameraMath.updateHeading(vehicle,camera,steer,(i%240)*.1f,1f/120f);
+            check(Float.isFinite(camera),"camera heading became non-finite");
+        }
         pass();
     }
 
