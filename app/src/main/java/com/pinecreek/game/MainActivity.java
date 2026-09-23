@@ -101,7 +101,7 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
                 -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         // Keep dialogue completely above the touch controls.
         // Using density-aware spacing avoids overlap on small/high-DPI phones.
-        dp.bottomMargin = dp(112);
+        dp.bottomMargin = dp(88);
         root.addView(dialogue, dp);
 
         setGameUi(false);
