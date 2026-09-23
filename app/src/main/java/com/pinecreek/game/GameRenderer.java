@@ -419,6 +419,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         boolean road = onRoad(px,pz);
         float oldX = px;
         float oldZ = pz;
+        float oldHeading = heading;
 
         VehiclePhysics.State physics = new VehiclePhysics.State(
                 px, pz, heading, signedSpeed, steeringAngle);
@@ -452,7 +453,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         if (hitsBuilding(px,pz)) {
             px = oldX;
             pz = oldZ;
-            signedSpeed *= -.14f;
+            heading = oldHeading;
+            steeringAngle *= .35f;
+            signedSpeed *= -.08f;
             if (bumpCooldown <= 0f) {
                 bumpCooldown = 3f;
                 listener.onDialogue("車内",
