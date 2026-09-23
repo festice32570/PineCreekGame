@@ -23,5 +23,8 @@ android {
     lint {
         abortOnError true
         warningsAsErrors true
+        // GitHub runners may have newer SDK platforms preinstalled than this
+        // project intentionally targets. Keep every other lint warning fatal.
+        disable 'OldTargetApi'
     }
 }
