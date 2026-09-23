@@ -4,7 +4,7 @@
         android:allowBackup="false"
         android:label="@string/app_name"
         android:icon="@drawable/pine_creek_keyart"
-        android:roundIcon="@drawable/pine_creek_icon"
+        android:roundIcon="@drawable/pine_creek_keyart"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen"
         android:supportsRtl="true">
         <activity
