@@ -92,12 +92,16 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         cp.setMargins(0, 14, 14, 0);
         root.addView(chapter, cp);
 
-        dialogue = panelText(19, 0xEE151A1D);
+        dialogue = panelText(18, 0xEE151A1D);
         dialogue.setVisibility(View.GONE);
+        dialogue.setMaxLines(4);
+        dialogue.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
         FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(
-                (int)(getResources().getDisplayMetrics().widthPixels * .72f),
+                (int)(getResources().getDisplayMetrics().widthPixels * .64f),
                 -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        dp.bottomMargin = 18;
+        // Keep dialogue completely above the touch controls.
+        // Using density-aware spacing avoids overlap on small/high-DPI phones.
+        dp.bottomMargin = dp(112);
         root.addView(dialogue, dp);
 
         setGameUi(false);
@@ -371,6 +375,11 @@ public class MainActivity extends Activity implements GameRenderer.Listener {
         if (leftPad != null) leftPad.setVisibility(v);
         if (rightPad != null) rightPad.setVisibility(v);
         if (!show && dialogue != null) dialogue.setVisibility(View.GONE);
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
     }
 
     private TextView panelText(int sp, int color) {
