@@ -1,6 +1,6 @@
 # Pine Creek: 冬の町
 
-![Pine Creek icon](docs/app-icon.svg)
+![Pine Creek key art](docs/pine_creek_keyart.jpg)
 
 雪に埋もれた架空の田舎町 **Pine Creek** を、古い架空のピックアップで走り回るAndroid向け3Dドライブゲームです。
 
@@ -12,7 +12,7 @@
 
 ## 現在のバージョン
 
-**v0.6.0**
+**v0.6.1**
 
 ### ゲーム
 
@@ -27,6 +27,8 @@
 - 圧雪路と深雪で異なる加速・抵抗・グリップ
 - 最後に安全だった道路へ戻る「復帰」機能
 - 速度でわずかに変わるカメラ追従と視野角
+- 旋回中は車両が先に画面内を左右へ動き、カメラ角度・横位置は遅れて追従
+- 操作ボタンと会話メッセージの重なりを抑えたUI
 - より細かい自作ピックアップモデル
   - ボンネット
   - キャビン
@@ -86,7 +88,7 @@
 
 普通に遊ぶだけなら **Releases** からAPKを直接ダウンロードしてください。
 
-**Releases → 最新版 → Assets → `PineCreek-v0.6.0.apk`**
+**Releases → 最新版 → Assets → `PineCreek-v0.6.1.apk`**
 
 AndroidでAPKを開けばインストールできます。端末の設定によっては、ブラウザまたはファイルマネージャーに「不明なアプリのインストール」を許可する必要があります。
 
@@ -159,11 +161,11 @@ Issueには以下があると助かります。
 - 発生したストーリー / ミッション
 - GitHub Actionsの場合は失敗したstepとログ
 
-## アイコン
+## キーアート / アイコン
 
-現在のアイコンは、雪のPine Creek・赤いピックアップ・食堂・七面鳥ケビンという生成コンセプトを元に、Androidで扱いやすいオリジナルのベクターアイコンへ落とし込んでいます。
+アプリアイコン、タイトル画面、GitHub Releaseには、プロジェクト用に用意した同一のPine Creekキーアートを使用しています。
 
-SVG版: [docs/app-icon.svg](docs/app-icon.svg)
+![Pine Creek key art](docs/pine_creek_keyart.jpg)
 
 ## アセットについて
 
