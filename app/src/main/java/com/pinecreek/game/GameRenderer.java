@@ -36,7 +36,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     public static final int CAMPAIGN_FREE = 99;
 
     private static final float ROAD_HALF = 6.5f;
-    private static final float WHEELBASE = 3.15f;
 
     private final Listener listener;
     private final Random random = new Random(1337L);
@@ -92,6 +91,13 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private float actionCooldown = 0f;
     private float honkCooldown = 0f;
     private float bumpCooldown = 0f;
+    private float safeX = 0f;
+    private float safeZ = 22f;
+    private float safeHeading = 0f;
+    private float safeUpdateTimer = 0f;
+    private float cameraHeading = 0f;
+    private boolean cameraReady = false;
+    private float viewAspect = 1.7778f;
 
     private float turkeyX = 8f;
     private float turkeyZ = -250f;
@@ -176,6 +182,11 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         heading = 0f;
         signedSpeed = 0f;
         steeringAngle = 0f;
+        safeX = px;
+        safeZ = pz;
+        safeHeading = heading;
+        cameraHeading = heading;
+        cameraReady = true;
         fuel = 100f;
         gameplay = true;
         radioTimer = 22f;
@@ -208,8 +219,14 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         px = x;
         pz = z;
         heading = h;
-        signedSpeed = Math.max(-8.5f, Math.min(24f, speed));
+        signedSpeed = Math.max(-VehiclePhysics.ROAD_REVERSE_SPEED,
+                Math.min(VehiclePhysics.ROAD_TOP_SPEED, speed));
         steeringAngle = 0f;
+        safeX = px;
+        safeZ = pz;
+        safeHeading = heading;
+        cameraHeading = heading;
+        cameraReady = true;
         fuel = Math.max(0f, Math.min(100f, savedFuel));
         gameplay = true;
         endingShown = false;
@@ -251,6 +268,18 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 
     public void honk() {
         honkRequested = true;
+    }
+
+    public void resetVehicle() {
+        px = safeX;
+        pz = safeZ;
+        heading = safeHeading;
+        signedSpeed = 0f;
+        steeringAngle = 0f;
+        cameraHeading = heading;
+        cameraReady = true;
+        listener.onDialogue("車内",
+                "道路へ復帰。パイン・クリークでは『何もなかったことにする』のも重要な運転技術だ。");
     }
 
     @Override
@@ -304,7 +333,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         GLES20.glViewport(0,0,width,height);
-        Matrix.perspectiveM(projection,0,63f,(float)width/Math.max(1,height),.12f,560f);
+        viewAspect = (float)width / Math.max(1,height);
+        Matrix.perspectiveM(projection,0,63f,viewAspect,.12f,560f);
     }
 
     @Override
@@ -330,13 +360,25 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 
         if (gameplay) {
             float speedAbs = Math.abs(signedSpeed);
-            float camBack = 11.8f + Math.min(5.2f,speedAbs*.22f);
-            float camX = px - (float)Math.sin(heading)*camBack;
-            float camZ = pz + (float)Math.cos(heading)*camBack;
-            float lookX = px + (float)Math.sin(heading)*6.2f;
-            float lookZ = pz - (float)Math.cos(heading)*6.2f;
-            Matrix.setLookAtM(view,0,camX,6.1f,camZ,lookX,1.45f,lookZ,0,1,0);
+            float fov = 58f + Math.min(8f, speedAbs * .34f);
+            Matrix.perspectiveM(projection,0,fov,viewAspect,.12f,560f);
+
+            if (!cameraReady) {
+                cameraHeading = heading;
+                cameraReady = true;
+            }
+            float delta = VehiclePhysics.normalizeAngle(heading - cameraHeading);
+            float follow = 1f - (float)Math.exp(-dt * (4.4f + speedAbs * .035f));
+            cameraHeading = VehiclePhysics.normalizeAngle(cameraHeading + delta * follow);
+
+            float camBack = 12.2f + Math.min(4.8f,speedAbs*.20f);
+            float camX = px - (float)Math.sin(cameraHeading)*camBack;
+            float camZ = pz + (float)Math.cos(cameraHeading)*camBack;
+            float lookX = px + (float)Math.sin(heading)*(6.0f + speedAbs*.08f);
+            float lookZ = pz - (float)Math.cos(heading)*(6.0f + speedAbs*.08f);
+            Matrix.setLookAtM(view,0,camX,6.15f,camZ,lookX,1.45f,lookZ,0,1,0);
         } else {
+            Matrix.perspectiveM(projection,0,63f,viewAspect,.12f,560f);
             float a = worldTime*.075f;
             float cx = (float)Math.sin(a)*34f;
             float cz = -238f + (float)Math.cos(a)*34f;
@@ -375,59 +417,37 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         updateTurkey();
 
         boolean road = onRoad(px,pz);
-        float abs = Math.abs(signedSpeed);
-
-        float steerInput = (left ? -1f : 0f) + (right ? 1f : 0f);
-        float speedSteerFactor = 1f - .45f*Math.min(1f,abs/22f);
-        float maxSteer = (float)Math.toRadians(31f)*speedSteerFactor;
-        float targetSteer = steerInput*maxSteer;
-        steeringAngle += (targetSteer-steeringAngle)*Math.min(1f,dt*6.4f);
-
-        if (steerInput == 0f) {
-            steeringAngle *= Math.max(0f,1f-dt*5.0f);
-        }
-
-        float forwardAccel = road ? 8.8f : 4.8f;
-        float reverseAccel = road ? 6.3f : 3.2f;
-
-        if (accel && fuel > 0f) {
-            if (signedSpeed < -.35f) {
-                signedSpeed = moveToward(signedSpeed,0f,15f*dt);
-            } else {
-                signedSpeed += forwardAccel*dt;
-                fuel = Math.max(0f,fuel-dt*.15f);
-            }
-        }
-
-        if (reverse && fuel > 0f) {
-            if (signedSpeed > .35f) {
-                signedSpeed = moveToward(signedSpeed,0f,15f*dt);
-            } else {
-                signedSpeed -= reverseAccel*dt;
-                fuel = Math.max(0f,fuel-dt*.12f);
-            }
-        }
-
-        if (brake) {
-            signedSpeed = moveToward(signedSpeed,0f,(road?19f:12f)*dt);
-        } else if (!accel && !reverse) {
-            signedSpeed = moveToward(signedSpeed,0f,(road?1.15f:2.5f)*dt);
-        }
-
-        float forwardMax = towingMode == 0 ? 23.5f : 15.5f;
-        float reverseMax = towingMode == 0 ? -8.5f : -5.2f;
-        signedSpeed = Math.max(reverseMax,Math.min(forwardMax,signedSpeed));
-
-        float grip = road ? 1f : .64f;
-        if (Math.abs(signedSpeed) > .18f) {
-            float yawRate = (signedSpeed/WHEELBASE)*(float)Math.tan(steeringAngle)*grip;
-            heading += yawRate*dt;
-        }
-
         float oldX = px;
         float oldZ = pz;
-        px += (float)Math.sin(heading)*signedSpeed*dt;
-        pz -= (float)Math.cos(heading)*signedSpeed*dt;
+
+        VehiclePhysics.State physics = new VehiclePhysics.State(
+                px, pz, heading, signedSpeed, steeringAngle);
+        VehiclePhysics.Input input = new VehiclePhysics.Input();
+        input.left = left;
+        input.right = right;
+        input.brake = brake;
+        input.throttle = accel && fuel > 0f;
+        input.reverse = reverse && fuel > 0f;
+
+        // Split long render frames into short physics steps to keep turning
+        // consistent at 30/60/120 Hz and during occasional frame drops.
+        float physicsRemaining = dt;
+        while (physicsRemaining > 0f) {
+            float step = Math.min(physicsRemaining, 1f / 120f);
+            VehiclePhysics.step(physics, input, road, towingMode != 0, step);
+            physicsRemaining -= step;
+        }
+
+        px = physics.x;
+        pz = physics.z;
+        heading = physics.heading;
+        signedSpeed = physics.speed;
+        steeringAngle = physics.steer;
+
+        if (fuel > 0f) {
+            if (input.throttle) fuel = Math.max(0f, fuel - dt * .15f);
+            else if (input.reverse) fuel = Math.max(0f, fuel - dt * .12f);
+        }
 
         if (hitsBuilding(px,pz)) {
             px = oldX;
@@ -438,6 +458,14 @@ public class GameRenderer implements GLSurfaceView.Renderer {
                 listener.onDialogue("車内",
                         "ゴンッ。建物は雪と違って押しても動かない。少なくともこの町では。");
             }
+        }
+
+        safeUpdateTimer -= dt;
+        if (road && !hitsBuilding(px,pz) && Math.abs(signedSpeed) < 18f && safeUpdateTimer <= 0f) {
+            safeX = px;
+            safeZ = pz;
+            safeHeading = heading;
+            safeUpdateTimer = 1.5f;
         }
 
         if (px < -59f || px > 59f || pz > 32f || pz < -625f) {
@@ -507,8 +535,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
                     status,
                     goal,
                     chapterText(),
-                    .67f+Math.min(1.0f,kmh/90f),
-                    .10f+Math.min(.18f,kmh/360f));
+                    VehiclePhysics.suggestedEnginePitch(signedSpeed),
+                    VehiclePhysics.suggestedEngineVolume(signedSpeed));
         }
     }
 
