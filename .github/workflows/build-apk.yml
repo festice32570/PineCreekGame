@@ -21,13 +21,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Vehicle handling self-test
+      - name: Vehicle and camera self-tests
         shell: bash
         run: |
-          rm -rf build/physics-test
-          mkdir -p build/physics-test
-          javac -d build/physics-test             app/src/main/java/com/pinecreek/game/VehiclePhysics.java             tools/VehiclePhysicsSelfTest.java
-          java -cp build/physics-test com.pinecreek.game.VehiclePhysicsSelfTest
+          rm -rf build/logic-test
+          mkdir -p build/logic-test
+          javac -d build/logic-test             app/src/main/java/com/pinecreek/game/VehiclePhysics.java             app/src/main/java/com/pinecreek/game/ChaseCameraMath.java             tools/VehiclePhysicsSelfTest.java             tools/ChaseCameraMathSelfTest.java
+          java -cp build/logic-test com.pinecreek.game.VehiclePhysicsSelfTest
+          java -cp build/logic-test com.pinecreek.game.ChaseCameraMathSelfTest
 
       - name: Android SDK 35
         shell: bash
@@ -59,7 +60,7 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Verify APK and package
+      - name: Verify APK, package and key art
         shell: bash
         run: |
           APK="app/build/outputs/apk/debug/app-debug.apk"
@@ -67,13 +68,19 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee build/apk-badging.txt
           grep -q "package: name='com.pinecreek.game'" build/apk-badging.txt
-          cp "$APK" PineCreek-v0.6.0.apk
+          grep -q "versionCode='7'" build/apk-badging.txt
+          grep -q "versionName='0.6.1'" build/apk-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump resources "$APK" | grep -q "pine_creek_keyart"
+          cp "$APK" PineCreek-v0.6.1.apk
+          cp docs/pine_creek_keyart.jpg pine-creek-keyart.jpg
 
       - name: Upload CI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PineCreekGame-v06-debug
-          path: PineCreek-v0.6.0.apk
+          name: PineCreekGame-v061-debug
+          path: |
+            PineCreek-v0.6.1.apk
+            pine-creek-keyart.jpg
           if-no-files-found: error
           retention-days: 30
 
@@ -82,12 +89,13 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v0.6.0
-          APK: PineCreek-v0.6.0.apk
+          TAG: v0.6.1
+          APK: PineCreek-v0.6.1.apk
+          KEYART: pine-creek-keyart.jpg
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" --clobber
-            gh release edit "$TAG"               --title "Pine Creek v0.6.0 - Handling & Chaos"               --notes-file RELEASE_NOTES.md
+            gh release upload "$TAG" "$APK" "$KEYART" --clobber
+            gh release edit "$TAG"               --title "Pine Creek v0.6.1 - Camera & Key Art Fix"               --notes-file RELEASE_NOTES.md
           else
-            gh release create "$TAG" "$APK"               --target "$GITHUB_SHA"               --title "Pine Creek v0.6.0 - Handling & Chaos"               --notes-file RELEASE_NOTES.md
+            gh release create "$TAG" "$APK" "$KEYART"               --target "$GITHUB_SHA"               --title "Pine Creek v0.6.1 - Camera & Key Art Fix"               --notes-file RELEASE_NOTES.md
           fi
