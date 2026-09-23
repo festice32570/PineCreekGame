@@ -39,7 +39,7 @@ public final class ChaseCameraMath {
             }
         } else {
             // Once steering is released, gently re-center the chase camera.
-            float neutralDeadZone = (float)Math.toRadians(2.0);
+            float neutralDeadZone = (float)Math.toRadians(0.5);
             if (absDelta > neutralDeadZone) {
                 float rate = 1.35f + Math.min(.85f, speedAbs * .022f);
                 float follow = 1f - (float)Math.exp(-dt * rate);
