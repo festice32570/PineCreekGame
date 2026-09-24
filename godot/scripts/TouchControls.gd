@@ -14,6 +14,7 @@ var reverse := 0.0
 var _touch_actions: Dictionary = {}
 var _buttons: Dictionary = {}
 var _mouse_action := ""
+var gameplay_enabled := false
 
 func _ready() -> void:
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -21,7 +22,23 @@ func _ready() -> void:
     _create_visual_buttons()
     resized.connect(_layout_buttons)
     _layout_buttons()
-    set_process_input(true)
+    set_gameplay_enabled(false)
+
+func set_gameplay_enabled(enabled: bool) -> void:
+    gameplay_enabled = enabled
+    set_process_input(enabled)
+    if not enabled:
+        _touch_actions.clear()
+        _mouse_action = ""
+        steer = 0.0
+        throttle = 0.0
+        brake = 0.0
+        reverse = 0.0
+        _update_visual_feedback([])
+
+func set_story_actions_enabled(enabled: bool) -> void:
+    if _buttons.has("action"):
+        (_buttons["action"] as Button).visible = enabled
 
 func _create_visual_buttons() -> void:
     var defs := {
@@ -79,6 +96,8 @@ func _set_button(action: String, rect: Rect2) -> void:
     b.size = rect.size
 
 func _input(event: InputEvent) -> void:
+    if not gameplay_enabled:
+        return
     if event is InputEventScreenTouch:
         _handle_touch(event.index, event.position, event.pressed)
         get_viewport().set_input_as_handled()

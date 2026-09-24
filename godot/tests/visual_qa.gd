@@ -43,38 +43,81 @@ func _run() -> void:
     await process_frame
     await physics_frame
 
-    # Story selection must be reachable from the title and render cleanly.
+    var car: PineVehicle = main.vehicle
+    var chase: PineChaseCamera = main.chase
+
+    # Story selection is a real menu: gameplay input must be completely disabled
+    # so touch drags belong to ScrollContainer instead of steering/camera.
     main._show_story_select()
     _check(main.story_select_layer.visible, "story selection opens from title")
+    _check(not main.touch.gameplay_enabled and not main.touch.is_processing_input(),
+        "story selection disables driving touch input")
+    _check(main.story_scroll != null and main.story_scroll.scroll_deadzone <= 16,
+        "story list starts scrolling with a short touch drag")
+    _check(not main.vehicle_audio.engine.playing and not main.vehicle_audio.snow.playing,
+        "title and story-selection menus do not leak vehicle audio")
     await _capture("/home/festice/ChatGPT-dev/PineCreekGame/godot/build/qa-story-select.png")
     main._story_select_back()
     _check(main.title_layer.visible, "story selection returns to title")
     _check(main.game_audio.current_music_path.ends_with("title_theme.wav"),
         "title screen uses the hard-rock theme")
 
-    # QA then follows the same title -> hidden stabilization -> game-start path
-    # as the real game. The vehicle must not be exposed while physics settles.
-    main._start_game()
-    var car: PineVehicle = main.vehicle
-    var chase: PineChaseCamera = main.chase
-    _check(not car.visible, "vehicle stays hidden while start physics stabilizes")
-    for i in range(48):
+    # Free drive is a first-class mode: no campaign, no marker, no Action button.
+    main._start_free_drive()
+    _check(not car.visible, "free-drive spawn remains hidden while physics settles")
+    for i in range(190):
         await physics_frame
+        if main.game_started:
+            break
+    _check(main.is_free_drive() and car.visible, "free drive starts after hidden stabilization")
+    _check(not main.story.started and not main.mission_marker.visible,
+        "free drive has no campaign or mission marker")
+    _check(main.touch.gameplay_enabled and not (main.touch._buttons["action"] as Button).visible,
+        "free drive enables driving controls without story Action")
+    _check(main.vehicle_audio.driving_enabled and main.vehicle_audio.engine.playing,
+        "free drive enables vehicle audio only after gameplay begins")
+    var free_spawn_y := car.global_position.y
+    for i in range(18):
+        await physics_frame
+    _check(absf(car.global_position.y - free_spawn_y) < 0.08,
+        "free-drive visible spawn has no falling phase")
+    main._pause_to_title()
+    _check(main.title_layer.visible and not main.game_started and not main.touch.gameplay_enabled,
+        "leaving free drive returns to a non-driving title menu")
+    _check(not main.vehicle_audio.driving_enabled and not main.vehicle_audio.engine.playing,
+        "returning to title stops engine and tyre audio")
+
+    # Story start uses the same stabilized spawn. Calling start twice must not
+    # launch competing async spawn sequences.
+    main._start_game()
+    main._start_game()
+    _check(main._starting_game, "duplicate start is guarded by one start sequence")
+    _check(not car.visible, "story vehicle stays hidden while start physics stabilizes")
+    var visible_y_min := INF
+    var visible_y_max := -INF
+    for i in range(190):
+        await physics_frame
+        if car.visible:
+            visible_y_min = minf(visible_y_min, car.global_position.y)
+            visible_y_max = maxf(visible_y_max, car.global_position.y)
+        if main.game_started and i > 20:
+            break
     _check(main.game_started and car.visible, "vehicle becomes visible only after stabilization")
+    _check(visible_y_max - visible_y_min < 0.09,
+        "visible story spawn never contains a sky-drop frame")
     _check(main.game_audio.current_music_path.ends_with("pine_creek_radio.wav"),
         "gameplay switches to the driving radio track")
-    var spawn_y := car.global_position.y
-    for i in range(24):
-        await physics_frame
-    _check(absf(car.global_position.y - spawn_y) < 0.12,
-        "visible spawn remains settled on the road")
+    _check(main.story.started and (main.touch._buttons["action"] as Button).visible,
+        "story mode starts campaign and restores Action control")
     _check(main.game_audio != null and main.game_audio.music != null and main.game_audio.music.playing,
         "background music playback is active after startup")
     _check(main.pause_button.visible, "pause button appears during gameplay")
     main._open_pause()
-    _check(main.pause_layer.visible and paused, "pause menu freezes gameplay")
+    _check(main.pause_layer.visible and paused and not main.touch.gameplay_enabled,
+        "pause menu freezes gameplay and disables driving touch")
     main._resume_game()
-    _check(not paused and not main.pause_layer.visible, "resume closes pause menu")
+    _check(not paused and not main.pause_layer.visible and main.touch.gameplay_enabled,
+        "resume closes pause menu and restores driving touch")
 
     var out := "/home/festice/ChatGPT-dev/PineCreekGame/godot/build"
 

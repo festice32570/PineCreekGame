@@ -10,9 +10,20 @@
 
 ## 現在の開発版
 
-**v0.8.5-alpha1 — テーマループ・圧雪サウンド刷新版**
+**v0.8.6-alpha1 — フリー走行・メニュー・スポーン修正版**
 
 従来のJava + 自前OpenGL版からGodot 4.7.2へ移行した新物理版を継続開発しています。旧実装は比較・検証用として `app/` に残していますが、主開発は `godot/` です。
+
+### v0.8.6-alpha1で変わったところ
+
+- タイトルに「フリー走行」を正式追加。キャンペーン・目的地・アクション無しで町を自由に運転
+- ストーリー選択中は運転タッチ入力を完全停止し、スクロールへ入力を渡すよう修正
+- ストーリー一覧のドラッグ開始距離を短くしてAndroidでスクロールしやすく調整
+- タイトル/ストーリー選択中はエンジン・雪路・スキッド・ホーンを完全停止
+- スポーンは固定フレーム待ちだけでなく、車体速度と車高が安定した状態を連続10フレーム確認してから表示
+- 表示直前に車体を再固定し、安定済み姿勢を1描画フレーム見せてから物理を解放
+- 二重タップで複数の非同期スポーンが走らないよう開始ガードを追加
+- 圧雪路音を通常速度で聞こえるレベルへ再ミックス
 
 ### v0.8.5-alpha1で変わったところ
 
@@ -95,14 +106,14 @@ Pine Creekのクレイジーさをそのまま3分のヘヴィメタルにした
 
 「IF IT RUNS, IT'S A CAR!」「KEVIN'S LOOSE AGAIN!」「CHECK ENGINE? — STILL RUNS! — THEN DRIVE!」など、ゲーム内の狂った町ルールをそのまま歌詞にしています。
 
-🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.5-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
+🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.6-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
 
 歌詞・制作方針・SHA-256は [docs/SOUNDTRACK.md](docs/SOUNDTRACK.md) を参照してください。
 v0.8.5-alpha1では、このフル版のコーラス16小節を25.6秒のタイトルループとしてゲームへ実装しています。
 
 ## 遊ぶだけなら
 
-GitHubの **Releases** から `PineCreek-Godot-v0.8.5-alpha1.apk` を取得してAndroidへインストールしてください。
+GitHubの **Releases** から `PineCreek-Godot-v0.8.6-alpha1.apk` を取得してAndroidへインストールしてください。
 
 このα版は旧Java版と共存できるよう、package IDを `com.pinecreek.game.godot` に分けています。
 

@@ -3,6 +3,10 @@ extends Node3D
 const ROAD_RESCUE_Y := 0.62
 const START_POINT := Vector3(0.0, ROAD_RESCUE_Y, 22.0)
 const START_STABILIZE_FRAMES := 42
+const START_STABLE_REQUIRED_FRAMES := 10
+const START_STABILIZE_MAX_FRAMES := 150
+
+enum PlayMode { MENU, STORY, FREE }
 
 var vehicle: PineVehicle
 var vehicle_audio: PineVehicleAudio
@@ -13,6 +17,7 @@ var hud: Label
 var info_label: Label
 var title_layer: CanvasLayer
 var story_select_layer: CanvasLayer
+var story_scroll: ScrollContainer
 var pause_layer: CanvasLayer
 var pause_button: Button
 var story: PineStoryDirector
@@ -21,6 +26,8 @@ var dialogue_label: Label
 var mission_marker: Node3D
 var game_started := false
 var game_paused := false
+var play_mode := PlayMode.MENU
+var _starting_game := false
 var selected_episode := 0
 var _reset_key_was_down := false
 var _horn_key_was_down := false
@@ -681,8 +688,8 @@ func _build_title() -> void:
 
     var panel := VBoxContainer.new()
     panel.set_anchors_preset(Control.PRESET_CENTER)
-    panel.position = Vector2(-230,62)
-    panel.size = Vector2(460,300)
+    panel.position = Vector2(-230,28)
+    panel.size = Vector2(460,390)
     panel.alignment = BoxContainer.ALIGNMENT_CENTER
     panel.add_theme_constant_override("separation",12)
     title_layer.add_child(panel)
@@ -694,6 +701,13 @@ func _build_title() -> void:
     start.pressed.connect(_start_game)
     panel.add_child(start)
 
+    var free_drive := Button.new()
+    free_drive.text = "フリー走行"
+    free_drive.custom_minimum_size = Vector2(460,68)
+    free_drive.add_theme_font_size_override("font_size",26)
+    free_drive.pressed.connect(_start_free_drive)
+    panel.add_child(free_drive)
+
     var select := Button.new()
     select.text = "ストーリーを選ぶ"
     select.custom_minimum_size = Vector2(460,68)
@@ -702,7 +716,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.5 alpha  •  フルテーマ由来ループ / 圧雪サウンド刷新"
+    note.text = "v0.8.6 alpha  •  フリー走行 / メニュー入力修正 / スポーン強化"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -745,15 +759,19 @@ func _build_story_select() -> void:
     hint.add_theme_font_size_override("font_size",18)
     panel.add_child(hint)
 
-    var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(920,500)
-    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    panel.add_child(scroll)
+    story_scroll = ScrollContainer.new()
+    story_scroll.custom_minimum_size = Vector2(920,500)
+    story_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    story_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    story_scroll.scroll_deadzone = 12
+    story_scroll.follow_focus = false
+    story_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+    panel.add_child(story_scroll)
 
     var list := VBoxContainer.new()
     list.custom_minimum_size = Vector2(890,0)
     list.add_theme_constant_override("separation",8)
-    scroll.add_child(list)
+    story_scroll.add_child(list)
 
     for i in range(story.get_episode_count()):
         var b := Button.new()
@@ -820,19 +838,31 @@ func _build_pause_menu() -> void:
     panel.add_child(title_button)
 
 func _story_select_back() -> void:
+    touch.set_gameplay_enabled(false)
     if game_audio != null:
         game_audio.click()
     story_select_layer.visible = false
     title_layer.visible = true
 
 func _show_story_select() -> void:
+    if _starting_game:
+        return
+    play_mode = PlayMode.MENU
+    _set_game_ui_visible(false)
+    vehicle.freeze = true
+    vehicle.set_controls(0.0,0.0,1.0,0.0)
+    touch.set_gameplay_enabled(false)
+    if story_scroll != null:
+        story_scroll.scroll_vertical = 0
     if game_audio != null:
         game_audio.click()
+        game_audio.play_title_theme()
     title_layer.visible = false
     story_select_layer.visible = true
 
 func _set_game_ui_visible(visible_now: bool) -> void:
     touch.visible = visible_now
+    touch.set_gameplay_enabled(visible_now)
     hud.visible = visible_now
     info_label.visible = visible_now
     objective_label.visible = visible_now
@@ -913,46 +943,121 @@ func _reset_vehicle_to_road() -> void:
     if game_started:
         _on_dialogue_requested("無線","復帰完了。最寄りの道路へ戻した。")
 
-func _reset_vehicle_for_story() -> void:
-    _teleport_vehicle(Transform3D(Basis.IDENTITY, START_POINT))
+func _sync_camera_to_vehicle() -> void:
+    if chase == null or vehicle == null:
+        return
+    chase.follow_yaw = vehicle.global_rotation.y
+    chase.orbit_yaw = 0.0
+    var forward := vehicle.global_transform.basis.z.normalized()
+    chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
 
-func _start_selected_episode(index: int) -> void:
-    if game_audio != null:
-        game_audio.click()
-        game_audio.set_ducked(false)
-        game_audio.play_drive_music()
-    get_tree().paused = false
-    game_paused = false
-    game_started = false
-    selected_episode = index
-
-    # Keep the vehicle hidden behind the title/story screen while the rigid body
-    # and suspension settle on the road. This prevents Android from ever
-    # exposing the initial physics/interpolation drop as a visible spawn.
+func _stabilize_vehicle_for_start() -> void:
+    # Android occasionally rendered one physics/interpolation frame from the
+    # pre-settle chassis position. Settle fully while hidden, then refreeze the
+    # already-resting transform for a rendered frame before physics is released.
     vehicle.visible = false
-    _reset_vehicle_for_story()
-    for i in range(START_STABILIZE_FRAMES):
+    vehicle.freeze = true
+    vehicle.sleeping = true
+    vehicle.global_transform = Transform3D(Basis.IDENTITY, START_POINT)
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+    vehicle.steering_state = 0.0
+    vehicle.set_controls(0.0,0.0,1.0,0.0)
+    vehicle.last_safe_transform = vehicle.global_transform
+    vehicle._safe_timer = 0.0
+    vehicle.reset_physics_interpolation()
+    vehicle.sleeping = false
+    vehicle.freeze = false
+
+    var stable_frames := 0
+    for i in range(START_STABILIZE_MAX_FRAMES):
         await get_tree().physics_frame
+        var settled := (
+            absf(vehicle.linear_velocity.y) < 0.035
+            and vehicle.linear_velocity.length() < 0.14
+            and absf(vehicle.global_position.y - ROAD_RESCUE_Y) < 0.24
+        )
+        stable_frames = stable_frames + 1 if settled else 0
+        if i >= START_STABILIZE_FRAMES and stable_frames >= START_STABLE_REQUIRED_FRAMES:
+            break
+
+    vehicle.freeze = true
+    vehicle.sleeping = true
     vehicle.linear_velocity = Vector3.ZERO
     vehicle.angular_velocity = Vector3.ZERO
     vehicle.last_safe_transform = vehicle.global_transform
     vehicle._safe_timer = 0.0
     vehicle.reset_physics_interpolation()
-    if chase != null:
-        chase.follow_yaw = vehicle.global_rotation.y
-        chase.orbit_yaw = 0.0
-        var forward := vehicle.global_transform.basis.z.normalized()
-        chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
-    await get_tree().physics_frame
+    _sync_camera_to_vehicle()
 
+    # Render the settled, frozen pose once. Only then let the rigid body move.
     vehicle.visible = true
-    game_started = true
-    _set_game_ui_visible(true)
+    await get_tree().process_frame
+    await get_tree().physics_frame
+    vehicle.sleeping = false
+    vehicle.freeze = false
+
+func _start_selected_episode(index: int) -> void:
+    await _begin_drive(PlayMode.STORY, index)
+
+func _start_free_drive() -> void:
+    await _begin_drive(PlayMode.FREE, -1)
+
+func is_free_drive() -> bool:
+    return game_started and play_mode == PlayMode.FREE
+
+func _begin_drive(mode: int, episode_index: int) -> void:
+    if game_started or _starting_game:
+        return
+    _starting_game = true
+    get_tree().paused = false
+    game_paused = false
+    game_started = false
+    play_mode = mode
+    selected_episode = episode_index
+
+    # Keep the menu visible while stabilizing, but disable its buttons so a
+    # double tap cannot start a second asynchronous spawn sequence.
+    title_layer.process_mode = Node.PROCESS_MODE_DISABLED
+    story_select_layer.process_mode = Node.PROCESS_MODE_DISABLED
+    touch.set_gameplay_enabled(false)
+
+    if game_audio != null:
+        game_audio.click()
+        game_audio.set_ducked(false)
+        game_audio.play_drive_music()
+
     if story != null:
-        story.start_campaign(index)
+        story.stop_campaign()
+    if mission_marker != null:
+        mission_marker.visible = false
+
+    await _stabilize_vehicle_for_start()
+
+    game_started = true
+    vehicle_audio.set_driving_enabled(true)
+    _set_game_ui_visible(true)
     title_layer.visible = false
     story_select_layer.visible = false
     pause_layer.visible = false
+    title_layer.process_mode = Node.PROCESS_MODE_INHERIT
+    story_select_layer.process_mode = Node.PROCESS_MODE_INHERIT
+
+    if mode == PlayMode.STORY:
+        touch.set_story_actions_enabled(true)
+        objective_label.visible = true
+        info_label.text = "PINE CREEK RADIO  CH 7  |  雪道では早めの減速"
+        if story != null:
+            story.start_campaign(episode_index)
+    else:
+        touch.set_story_actions_enabled(false)
+        objective_label.visible = false
+        if mission_marker != null:
+            mission_marker.visible = false
+        info_label.text = "PINE CREEK RADIO  CH 7  |  フリー走行  |  目的地なし"
+        _on_dialogue_requested("PINE CREEK RADIO","フリー走行。好きに走れ。道路が分からなくなったら『復帰』。")
+
+    _starting_game = false
 
 func _open_pause() -> void:
     if not game_started or game_paused:
@@ -963,6 +1068,7 @@ func _open_pause() -> void:
         game_audio.set_ducked(true)
     pause_layer.visible = true
     touch.visible = false
+    touch.set_gameplay_enabled(false)
     pause_button.visible = false
     get_tree().paused = true
 
@@ -971,6 +1077,7 @@ func _resume_game() -> void:
     game_paused = false
     pause_layer.visible = false
     touch.visible = true
+    touch.set_gameplay_enabled(true)
     pause_button.visible = true
     if game_audio != null:
         game_audio.click()
@@ -980,8 +1087,12 @@ func _leave_game_to_menu() -> void:
     get_tree().paused = false
     game_paused = false
     game_started = false
+    play_mode = PlayMode.MENU
+    _starting_game = false
     vehicle.freeze = true
     vehicle.set_controls(0.0,0.0,1.0,0.0)
+    if vehicle_audio != null:
+        vehicle_audio.set_driving_enabled(false)
     if story != null:
         story.stop_campaign()
     _set_game_ui_visible(false)

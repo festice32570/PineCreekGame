@@ -221,12 +221,20 @@ func _run() -> void:
     runtime_vehicle_audio.attach_vehicle(car)
     root.add_child(runtime_vehicle_audio)
     await process_frame
+    check(not runtime_vehicle_audio.engine.playing and not runtime_vehicle_audio.driving_enabled,
+        "vehicle audio stays silent before driving mode starts")
+    runtime_vehicle_audio.set_driving_enabled(true)
     var engine_loop := runtime_vehicle_audio.engine.stream as AudioStreamWAV
     check(engine_loop != null and engine_loop.loop_end > 0,
         "engine audio has a non-zero loop range")
     runtime_vehicle_audio._process(0.016)
     check(runtime_vehicle_audio.snow.volume_db <= -79.0 and runtime_vehicle_audio.skid.volume_db <= -79.0,
         "stationary vehicle gates road and skid hiss")
+    car.linear_velocity = Vector3(0.0,0.0,8.0)
+    runtime_vehicle_audio._process(0.016)
+    check(runtime_vehicle_audio.snow.volume_db > -25.0 and runtime_vehicle_audio.snow.playing,
+        "packed-snow tyre texture becomes audible at normal driving speed")
+    car.linear_velocity = Vector3.ZERO
     await create_timer(0.25).timeout
     check(runtime_vehicle_audio.engine.playing and runtime_vehicle_audio.engine.get_playback_position() > 0.05,
         "engine loop keeps advancing instead of restarting as clicks")

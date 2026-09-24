@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT_BIN:-/home/festice/.local/bin/godot}"
 SDK="${ANDROID_HOME:-/home/festice/Android/Sdk}"
 SECRETS="${PINE_ANDROID_ENV:-/home/festice/.config/pinecreek/android-release.env}"
-APK="$ROOT/build/PineCreek-Godot-v0.8.5-alpha1.apk"
+APK="$ROOT/build/PineCreek-Godot-v0.8.6-alpha1.apk"
 
 export ANDROID_HOME="$SDK"
 export PATH="$SDK/platform-tools:$PATH"
@@ -59,12 +59,12 @@ TARGET_SDK="$("$APK_ANALYZER" manifest target-sdk "$APK")"
 } | tee "$ROOT/build/apk-manifest-summary.txt"
 
 [[ "$APP_ID" == "com.pinecreek.game.godot" ]]
-[[ "$VERSION_CODE" == "16" ]]
-[[ "$VERSION_NAME" == "0.8.5-alpha1" ]]
+[[ "$VERSION_CODE" == "17" ]]
+[[ "$VERSION_NAME" == "0.8.6-alpha1" ]]
 [[ "$MIN_SDK" == "24" ]]
 [[ "$TARGET_SDK" == "36" ]]
 
 echo "[5/5] Artifact digest"
-sha256sum "$APK" | tee "$ROOT/build/PineCreek-Godot-v0.8.5-alpha1.apk.sha256"
+sha256sum "$APK" | tee "$ROOT/build/PineCreek-Godot-v0.8.6-alpha1.apk.sha256"
 ls -lh "$APK"
 echo "BUILD_ANDROID=PASS"

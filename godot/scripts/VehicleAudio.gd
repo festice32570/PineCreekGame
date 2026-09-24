@@ -6,6 +6,7 @@ var engine: AudioStreamPlayer
 var snow: AudioStreamPlayer
 var skid: AudioStreamPlayer
 var horn: AudioStreamPlayer
+var driving_enabled := false
 
 func _ready() -> void:
     engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -8.0)
@@ -34,18 +35,29 @@ func _make_loop_player(name_text: String, path: String, volume: float) -> AudioS
     p.bus = "Master"
     p.volume_db = volume
     add_child(p)
-    p.play()
     return p
+
+func set_driving_enabled(enabled: bool) -> void:
+    driving_enabled = enabled
+    set_process(enabled)
+    if enabled:
+        for p in [engine, snow, skid]:
+            if p != null and p.stream != null and not p.playing:
+                p.play()
+    else:
+        for p in [engine, snow, skid, horn]:
+            if p != null:
+                p.stop()
 
 func attach_vehicle(v: PineVehicle) -> void:
     vehicle = v
 
 func trigger_horn() -> void:
-    if horn != null:
+    if driving_enabled and horn != null:
         horn.play()
 
 func _process(delta: float) -> void:
-    if vehicle == null:
+    if not driving_enabled or vehicle == null:
         return
 
     var speed := vehicle.linear_velocity.length()
@@ -57,11 +69,14 @@ func _process(delta: float) -> void:
     engine.volume_db = lerpf(-11.0, -3.5, clampf(0.18 + throttle * 0.72 + speed / 70.0, 0.0, 1.0))
 
     var road_amount := clampf(speed / 20.0, 0.0, 1.0)
-    snow.pitch_scale = lerpf(0.78, 1.22, road_amount)
-    if speed < 1.15:
+    snow.pitch_scale = lerpf(0.76, 1.18, road_amount)
+    if speed < 0.45:
         snow.volume_db = -80.0
     else:
-        snow.volume_db = lerpf(-38.0, -20.0, clampf((road_amount - 0.05) / 0.95, 0.0, 1.0))
+        # Snow is a tyre texture, not a constant hiss bed. Bring the new
+        # granular crunch loop in early enough to be audible under the V8.
+        var snow_mix := sqrt(clampf((speed - 0.45) / 18.0, 0.0, 1.0))
+        snow.volume_db = lerpf(-30.0, -12.0, snow_mix)
 
     var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
     var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)
@@ -69,9 +84,7 @@ func _process(delta: float) -> void:
     skid.volume_db = -80.0 if scrub < 0.04 else lerpf(-32.0, -11.0, scrub)
 
 func shutdown() -> void:
-    for p in [engine, snow, skid, horn]:
-        if p != null:
-            p.stop()
+    set_driving_enabled(false)
 
 func _exit_tree() -> void:
     shutdown()
