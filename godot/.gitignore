@@ -12,6 +12,7 @@ build/
 
 # Godot-generated import metadata can be regenerated
 *.import
+!assets/audio/*.wav.import
 
 # Local key-art conversion intermediates (the exact PNG is tracked)
 assets/ui/pine_creek_keyart_q*.jpg

@@ -1,7 +1,7 @@
 from pathlib import Path
 import math, random, struct, wave
 
-RATE = 22050
+RATE = 48000
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "assets" / "audio"
 OUT.mkdir(parents=True, exist_ok=True)

@@ -702,7 +702,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.2 alpha  •  スポーン安定化 / Android音声対策 / 24ストーリー"
+    note.text = "v0.8.3 alpha  •  PCM音声 / ループ修正 / 道路復帰強化"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -874,7 +874,40 @@ func _nearest_road_rescue_transform(from_pos: Vector3) -> Transform3D:
 func _reset_vehicle_to_road() -> void:
     if vehicle == null:
         return
-    _teleport_vehicle(_nearest_road_rescue_transform(vehicle.global_position))
+    var target := _nearest_road_rescue_transform(vehicle.global_position)
+
+    # RigidBody transforms changed directly from a touch/input callback can be
+    # overwritten by the next physics step on some devices. Hold the body frozen
+    # for one physics frame, then wake it on the road and verify the relocation.
+    vehicle.freeze = true
+    vehicle.sleeping = true
+    vehicle.global_transform = target
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+    vehicle.steering_state = 0.0
+    vehicle.set_controls(0.0,0.0,1.0,0.0)
+    vehicle.last_safe_transform = target
+    vehicle._safe_timer = 0.0
+    vehicle.reset_physics_interpolation()
+    if chase != null:
+        chase.follow_yaw = vehicle.global_rotation.y
+        chase.orbit_yaw = 0.0
+        var forward := vehicle.global_transform.basis.z.normalized()
+        chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
+
+    await get_tree().physics_frame
+    vehicle.sleeping = false
+    vehicle.freeze = false
+    await get_tree().physics_frame
+
+    var horizontal_error := Vector2(
+        vehicle.global_position.x - target.origin.x,
+        vehicle.global_position.z - target.origin.z
+    ).length()
+    if horizontal_error > 0.65 or vehicle.global_position.y < 0.30:
+        _teleport_vehicle(target)
+        await get_tree().physics_frame
+
     if game_audio != null:
         game_audio.click()
     if game_started:

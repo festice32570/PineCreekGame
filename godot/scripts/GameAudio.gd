@@ -40,15 +40,13 @@ func _ensure_music_playing() -> void:
     if music != null and music.stream != null and not music.playing:
         music.play()
 
-func _process(_delta: float) -> void:
-    if music != null and music.stream != null and not music.playing:
-        _ensure_music_playing()
-
 func _looping_wav(path: String) -> AudioStream:
     var stream := load(path)
     if stream is AudioStreamWAV:
         var wav := (stream as AudioStreamWAV).duplicate() as AudioStreamWAV
         wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+        wav.loop_begin = 0
+        wav.loop_end = maxi(1, int(round(wav.get_length() * float(wav.mix_rate))))
         return wav
     return stream
 
@@ -63,3 +61,5 @@ func pause_cue() -> void:
 func set_ducked(ducked: bool) -> void:
     if music != null:
         music.volume_db = -18.0 if ducked else -8.0
+        if not music.playing:
+            _ensure_music_playing()

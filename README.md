@@ -10,9 +10,17 @@
 
 ## 現在の開発版
 
-**v0.8.2-alpha1 — スポーン・Android音声対策版**
+**v0.8.3-alpha1 — PCM音声・道路復帰強化版**
 
 従来のJava + 自前OpenGL版からGodot 4.7.2へ移行した新物理版を継続開発しています。旧実装は比較・検証用として `app/` に残していますが、主開発は `godot/` です。
+
+### v0.8.3-alpha1で変わったところ
+
+- BGM / エンジン / 路面音の「ブチブチ」原因だった0-length loopを修正し、実サンプル数のloop_endを明示
+- WAVを48 kHz / 16-bitのローカルPCMとしてインポートし、QOAデコードを避けてAndroid再生を単純化
+- フレームごとの音声再スタート処理を廃止し、ループ音が連続再生されることを回帰テスト
+- 復帰処理はRigidBodyを1 physics frame固定して道路へ移動し、復帰結果を確認して必要なら再試行
+- Androidと同じ画面タッチ経路で「復帰」を押し、雪原から道路へ戻る実描画QAを追加
 
 ### v0.8.2-alpha1で変わったところ
 
@@ -61,7 +69,7 @@
 
 ## 遊ぶだけなら
 
-GitHubの **Releases** から `PineCreek-Godot-v0.8.2-alpha1.apk` を取得してAndroidへインストールしてください。
+GitHubの **Releases** から `PineCreek-Godot-v0.8.3-alpha1.apk` を取得してAndroidへインストールしてください。
 
 このα版は旧Java版と共存できるよう、package IDを `com.pinecreek.game.godot` に分けています。
 

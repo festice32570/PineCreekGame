@@ -26,6 +26,8 @@ func _make_loop_player(name_text: String, path: String, volume: float) -> AudioS
     if stream is AudioStreamWAV:
         var wav := (stream as AudioStreamWAV).duplicate() as AudioStreamWAV
         wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+        wav.loop_begin = 0
+        wav.loop_end = maxi(1, int(round(wav.get_length() * float(wav.mix_rate))))
         p.stream = wav
     else:
         p.stream = stream
@@ -43,9 +45,6 @@ func trigger_horn() -> void:
         horn.play()
 
 func _process(delta: float) -> void:
-    for p in [engine, snow, skid]:
-        if p != null and p.stream != null and not p.playing:
-            p.play()
     if vehicle == null:
         return
 

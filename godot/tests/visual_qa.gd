@@ -90,15 +90,31 @@ func _run() -> void:
     car.global_transform = Transform3D(Basis.IDENTITY, Vector3(20,0.62,20))
     car.freeze = false
     main.touch.reset_requested.emit()
-    await physics_frame
+    for i in range(4):
+        await physics_frame
     _check(absf(car.global_position.x) < 0.12 and absf(car.global_position.z - 20.0) < 0.25,
-        "reset button rescues an off-road vehicle to the main road")
+        "reset signal rescues an off-road vehicle to the main road")
+
+    # Exercise the same screen-hit path used by an Android touch on the visible
+    # reset button, not only the signal directly.
+    car.freeze = true
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(34,0.62,35))
+    car.freeze = false
+    var reset_button: Button = main.touch._buttons["reset"]
+    var reset_point := reset_button.position + reset_button.size * 0.5
+    main.touch._handle_touch(77, reset_point, true)
+    main.touch._handle_touch(77, reset_point, false)
+    for i in range(4):
+        await physics_frame
+    _check(absf(car.global_position.x) < 0.12 and absf(car.global_position.z - 35.0) < 0.35,
+        "actual touch on reset returns a vehicle from snow to the road")
 
     car.freeze = true
     car.global_transform = Transform3D(Basis.IDENTITY, Vector3(20,0.62,-30))
     car.freeze = false
     main._reset_vehicle_to_road()
-    await physics_frame
+    for i in range(4):
+        await physics_frame
     _check(absf(car.global_position.z + 24.0) < 0.25 and absf(car.global_position.x - 20.0) < 0.25,
         "rescue chooses the cross road when it is nearer")
 
@@ -106,7 +122,8 @@ func _run() -> void:
     car.global_transform = Transform3D(Basis.IDENTITY, Vector3(8,-5.0,10))
     car.freeze = false
     main._physics_process(0.016)
-    await physics_frame
+    for i in range(4):
+        await physics_frame
     _check(car.global_position.y > 0.35 and absf(car.global_position.x) < 0.15,
         "falling below the world automatically rescues to a road")
 

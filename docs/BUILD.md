@@ -108,8 +108,8 @@ export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=your-secret
 生成物:
 
 ```text
-godot/build/PineCreek-Godot-v0.8.2-alpha1.apk
-godot/build/PineCreek-Godot-v0.8.2-alpha1.apk.sha256
+godot/build/PineCreek-Godot-v0.8.3-alpha1.apk
+godot/build/PineCreek-Godot-v0.8.3-alpha1.apk.sha256
 godot/build/apk-manifest-summary.txt
 ```
 

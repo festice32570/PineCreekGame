@@ -167,12 +167,19 @@ func _run() -> void:
     story.start_campaign(12)
     check(story.episode_index == 12 and story.stage_index == 0, "story selector can start an arbitrary episode")
     check(story.get_episode_title(12).contains("ケビン"), "story selector exposes episode titles")
-    check(load("res://assets/audio/pine_creek_radio.wav") is AudioStreamWAV, "original BGM WAV imports")
-    check(load("res://assets/audio/engine_idle.wav") is AudioStreamWAV, "engine loop WAV imports")
-    check(load("res://assets/audio/snow_skid.wav") is AudioStreamWAV, "snow skid WAV imports")
+    var bg_source := load("res://assets/audio/pine_creek_radio.wav") as AudioStreamWAV
+    var engine_source := load("res://assets/audio/engine_idle.wav") as AudioStreamWAV
+    var skid_source := load("res://assets/audio/snow_skid.wav") as AudioStreamWAV
+    check(bg_source != null, "original BGM WAV imports")
+    check(engine_source != null, "engine loop WAV imports")
+    check(skid_source != null, "snow skid WAV imports")
+    check(bg_source.format == AudioStreamWAV.FORMAT_16_BITS and bg_source.mix_rate == 48000,
+        "BGM imports as local 48 kHz PCM instead of QOA")
+    check(engine_source.format == AudioStreamWAV.FORMAT_16_BITS and engine_source.mix_rate == 48000,
+        "engine loop imports as local 48 kHz PCM instead of QOA")
 
-    # Runtime audio regression: imported streams are not enough; players must
-    # actually enter the playing state and the Master bus must be unmuted.
+    # Runtime audio regression: imported streams are not enough; looping audio
+    # must have a real non-zero loop end and must keep advancing after startup.
     var game_audio := PineGameAudio.new()
     root.add_child(game_audio)
     await process_frame
@@ -180,11 +187,27 @@ func _run() -> void:
     var master_bus := AudioServer.get_bus_index("Master")
     check(master_bus >= 0 and not AudioServer.is_bus_mute(master_bus),
         "Master audio bus is available and unmuted")
-    check(game_audio.music != null and game_audio.music.stream != null and game_audio.music.playing,
-        "background music player is actively playing")
+    var bg_loop := game_audio.music.stream as AudioStreamWAV
+    check(bg_loop != null and bg_loop.loop_mode == AudioStreamWAV.LOOP_FORWARD and bg_loop.loop_end > 0,
+        "background music has a non-zero forward loop range")
+    await create_timer(0.25).timeout
+    check(game_audio.music.playing and game_audio.music.get_playback_position() > 0.05,
+        "background music keeps playing instead of restarting as clicks")
     game_audio.click()
     check(game_audio.ui != null and game_audio.ui.playing,
         "UI sound effect enters playing state")
+
+    var runtime_vehicle_audio := PineVehicleAudio.new()
+    runtime_vehicle_audio.attach_vehicle(car)
+    root.add_child(runtime_vehicle_audio)
+    await process_frame
+    var engine_loop := runtime_vehicle_audio.engine.stream as AudioStreamWAV
+    check(engine_loop != null and engine_loop.loop_end > 0,
+        "engine audio has a non-zero loop range")
+    await create_timer(0.25).timeout
+    check(runtime_vehicle_audio.engine.playing and runtime_vehicle_audio.engine.get_playback_position() > 0.05,
+        "engine loop keeps advancing instead of restarting as clicks")
+    runtime_vehicle_audio.queue_free()
     game_audio.queue_free()
 
     world.queue_free()
