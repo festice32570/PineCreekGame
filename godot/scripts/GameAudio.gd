@@ -7,23 +7,42 @@ var cue: AudioStreamPlayer
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    _ensure_master_output()
     music = AudioStreamPlayer.new()
     music.name = "PineCreekRadio"
     music.stream = _looping_wav("res://assets/audio/pine_creek_radio.wav")
-    music.volume_db = -15.0
+    music.bus = "Master"
+    music.volume_db = -8.0
     add_child(music)
-    music.play()
+    call_deferred("_ensure_music_playing")
 
     ui = AudioStreamPlayer.new()
     ui.name = "UiClick"
     ui.stream = load("res://assets/audio/ui_click.wav")
-    ui.volume_db = -7.0
+    ui.bus = "Master"
+    ui.volume_db = -4.0
     add_child(ui)
     cue = AudioStreamPlayer.new()
     cue.name = "PauseCue"
     cue.stream = load("res://assets/audio/pause_cue.wav")
-    cue.volume_db = -5.0
+    cue.bus = "Master"
+    cue.volume_db = -4.0
     add_child(cue)
+
+func _ensure_master_output() -> void:
+    var master := AudioServer.get_bus_index("Master")
+    if master >= 0:
+        AudioServer.set_bus_mute(master, false)
+        AudioServer.set_bus_volume_db(master, 0.0)
+
+func _ensure_music_playing() -> void:
+    _ensure_master_output()
+    if music != null and music.stream != null and not music.playing:
+        music.play()
+
+func _process(_delta: float) -> void:
+    if music != null and music.stream != null and not music.playing:
+        _ensure_music_playing()
 
 func _looping_wav(path: String) -> AudioStream:
     var stream := load(path)
@@ -43,4 +62,4 @@ func pause_cue() -> void:
 
 func set_ducked(ducked: bool) -> void:
     if music != null:
-        music.volume_db = -24.0 if ducked else -15.0
+        music.volume_db = -18.0 if ducked else -8.0

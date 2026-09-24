@@ -2,6 +2,7 @@ extends Node3D
 
 const ROAD_RESCUE_Y := 0.62
 const START_POINT := Vector3(0.0, ROAD_RESCUE_Y, 22.0)
+const START_STABILIZE_FRAMES := 42
 
 var vehicle: PineVehicle
 var vehicle_audio: PineVehicleAudio
@@ -456,6 +457,7 @@ func _build_vehicle() -> void:
     vehicle.name = "PlayerPickup"
     vehicle.freeze = true
     vehicle.position = START_POINT
+    vehicle.visible = false
     add_child(vehicle)
 
     vehicle_audio = PineVehicleAudio.new()
@@ -700,7 +702,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.1 alpha  •  駐車枠ミッション / 道路復帰修正 / 24ストーリー"
+    note.text = "v0.8.2 alpha  •  スポーン安定化 / Android音声対策 / 24ストーリー"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -887,9 +889,30 @@ func _start_selected_episode(index: int) -> void:
         game_audio.set_ducked(false)
     get_tree().paused = false
     game_paused = false
-    game_started = true
+    game_started = false
     selected_episode = index
+
+    # Keep the vehicle hidden behind the title/story screen while the rigid body
+    # and suspension settle on the road. This prevents Android from ever
+    # exposing the initial physics/interpolation drop as a visible spawn.
+    vehicle.visible = false
     _reset_vehicle_for_story()
+    for i in range(START_STABILIZE_FRAMES):
+        await get_tree().physics_frame
+    vehicle.linear_velocity = Vector3.ZERO
+    vehicle.angular_velocity = Vector3.ZERO
+    vehicle.last_safe_transform = vehicle.global_transform
+    vehicle._safe_timer = 0.0
+    vehicle.reset_physics_interpolation()
+    if chase != null:
+        chase.follow_yaw = vehicle.global_rotation.y
+        chase.orbit_yaw = 0.0
+        var forward := vehicle.global_transform.basis.z.normalized()
+        chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
+    await get_tree().physics_frame
+
+    vehicle.visible = true
+    game_started = true
     _set_game_ui_visible(true)
     if story != null:
         story.start_campaign(index)

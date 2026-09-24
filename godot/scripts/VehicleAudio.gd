@@ -8,14 +8,15 @@ var skid: AudioStreamPlayer
 var horn: AudioStreamPlayer
 
 func _ready() -> void:
-    engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -9.0)
+    engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -7.0)
     snow = _make_loop_player("SnowRoad", "res://assets/audio/snow_roll.wav", -40.0)
     skid = _make_loop_player("SnowSkid", "res://assets/audio/snow_skid.wav", -45.0)
 
     horn = AudioStreamPlayer.new()
     horn.name = "TruckHorn"
     horn.stream = load("res://assets/audio/truck_horn.wav")
-    horn.volume_db = -3.5
+    horn.bus = "Master"
+    horn.volume_db = -5.0
     add_child(horn)
 
 func _make_loop_player(name_text: String, path: String, volume: float) -> AudioStreamPlayer:
@@ -28,6 +29,7 @@ func _make_loop_player(name_text: String, path: String, volume: float) -> AudioS
         p.stream = wav
     else:
         p.stream = stream
+    p.bus = "Master"
     p.volume_db = volume
     add_child(p)
     p.play()
@@ -41,6 +43,9 @@ func trigger_horn() -> void:
         horn.play()
 
 func _process(delta: float) -> void:
+    for p in [engine, snow, skid]:
+        if p != null and p.stream != null and not p.playing:
+            p.play()
     if vehicle == null:
         return
 

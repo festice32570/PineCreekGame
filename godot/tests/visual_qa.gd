@@ -50,15 +50,22 @@ func _run() -> void:
     main._story_select_back()
     _check(main.title_layer.visible, "story selection returns to title")
 
-    # QA then follows the same title -> game-start path as the real game.
+    # QA then follows the same title -> hidden stabilization -> game-start path
+    # as the real game. The vehicle must not be exposed while physics settles.
     main._start_game()
     var car: PineVehicle = main.vehicle
     var chase: PineChaseCamera = main.chase
+    _check(not car.visible, "vehicle stays hidden while start physics stabilizes")
+    for i in range(48):
+        await physics_frame
+    _check(main.game_started and car.visible, "vehicle becomes visible only after stabilization")
     var spawn_y := car.global_position.y
     for i in range(24):
         await physics_frame
-    _check(absf(car.global_position.y - spawn_y) < 0.20,
-        "spawn settles on the road without a visible drop")
+    _check(absf(car.global_position.y - spawn_y) < 0.12,
+        "visible spawn remains settled on the road")
+    _check(main.game_audio != null and main.game_audio.music != null and main.game_audio.music.playing,
+        "background music playback is active after startup")
     _check(main.pause_button.visible, "pause button appears during gameplay")
     main._open_pause()
     _check(main.pause_layer.visible and paused, "pause menu freezes gameplay")

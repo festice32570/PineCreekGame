@@ -12,7 +12,7 @@ def clamp(v):
 
 def write_mono(name, samples):
     peak = max(0.001, max(abs(x) for x in samples))
-    gain = min(0.94 / peak, 1.0)
+    gain = 0.94 / peak
     with wave.open(str(OUT / name), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE)
         data = bytearray()
@@ -22,7 +22,7 @@ def write_mono(name, samples):
 
 def write_stereo(name, left, right):
     peak = max(0.001, max(max(abs(x) for x in left), max(abs(x) for x in right)))
-    gain = min(0.91 / peak, 1.0)
+    gain = 0.91 / peak
     with wave.open(str(OUT / name), "wb") as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(RATE)
         data = bytearray()

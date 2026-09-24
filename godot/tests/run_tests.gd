@@ -171,6 +171,22 @@ func _run() -> void:
     check(load("res://assets/audio/engine_idle.wav") is AudioStreamWAV, "engine loop WAV imports")
     check(load("res://assets/audio/snow_skid.wav") is AudioStreamWAV, "snow skid WAV imports")
 
+    # Runtime audio regression: imported streams are not enough; players must
+    # actually enter the playing state and the Master bus must be unmuted.
+    var game_audio := PineGameAudio.new()
+    root.add_child(game_audio)
+    await process_frame
+    await process_frame
+    var master_bus := AudioServer.get_bus_index("Master")
+    check(master_bus >= 0 and not AudioServer.is_bus_mute(master_bus),
+        "Master audio bus is available and unmuted")
+    check(game_audio.music != null and game_audio.music.stream != null and game_audio.music.playing,
+        "background music player is actively playing")
+    game_audio.click()
+    check(game_audio.ui != null and game_audio.ui.playing,
+        "UI sound effect enters playing state")
+    game_audio.queue_free()
+
     world.queue_free()
     await process_frame
 
