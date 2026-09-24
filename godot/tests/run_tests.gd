@@ -232,8 +232,10 @@ func _run() -> void:
         "stationary vehicle gates road and skid hiss")
     car.linear_velocity = Vector3(0.0,0.0,8.0)
     runtime_vehicle_audio._process(0.016)
-    check(runtime_vehicle_audio.snow.volume_db > -25.0 and runtime_vehicle_audio.snow.playing,
-        "packed-snow tyre texture becomes audible at normal driving speed")
+    check(runtime_vehicle_audio.snow.volume_db > -34.0 and runtime_vehicle_audio.snow.playing,
+        "packed-snow tyre texture remains present at normal driving speed")
+    check(runtime_vehicle_audio.snow.volume_db <= runtime_vehicle_audio.engine.volume_db - 12.0,
+        "packed-snow texture stays well below the V8 in the driving mix")
     check(absf(runtime_vehicle_audio.snow.pitch_scale - 1.0) < 0.001,
         "packed-snow texture never pitch-shifts into a rising musical tone")
     car.linear_velocity = Vector3.ZERO

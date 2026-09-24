@@ -78,7 +78,9 @@ func _process(delta: float) -> void:
         # Snow is a tyre texture, not a constant hiss bed. Bring the new
         # granular crunch loop in early enough to be audible under the V8.
         var snow_mix := sqrt(clampf((speed - 0.45) / 18.0, 0.0, 1.0))
-        snow.volume_db = lerpf(-30.0, -12.0, snow_mix)
+        # Packed snow should sit underneath the V8 as subtle road texture, not
+        # read as a foreground effect. Keep roughly 15–22 dB below the engine.
+        snow.volume_db = lerpf(-38.0, -22.0, snow_mix)
 
     var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
     var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)
