@@ -702,7 +702,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.3 alpha  •  PCM音声 / ループ修正 / 道路復帰強化"
+    note.text = "v0.8.4 alpha  •  V8サウンド / ハードロックテーマ / BGM切替"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -920,6 +920,7 @@ func _start_selected_episode(index: int) -> void:
     if game_audio != null:
         game_audio.click()
         game_audio.set_ducked(false)
+        game_audio.play_drive_music()
     get_tree().paused = false
     game_paused = false
     game_started = false
@@ -987,6 +988,7 @@ func _leave_game_to_menu() -> void:
     pause_layer.visible = false
     if game_audio != null:
         game_audio.set_ducked(false)
+        game_audio.play_title_theme()
 
 func _pause_to_story_select() -> void:
     _leave_game_to_menu()

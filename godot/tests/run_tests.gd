@@ -167,14 +167,18 @@ func _run() -> void:
     story.start_campaign(12)
     check(story.episode_index == 12 and story.stage_index == 0, "story selector can start an arbitrary episode")
     check(story.get_episode_title(12).contains("ケビン"), "story selector exposes episode titles")
+    var title_source := load("res://assets/audio/title_theme.wav") as AudioStreamWAV
     var bg_source := load("res://assets/audio/pine_creek_radio.wav") as AudioStreamWAV
     var engine_source := load("res://assets/audio/engine_idle.wav") as AudioStreamWAV
     var skid_source := load("res://assets/audio/snow_skid.wav") as AudioStreamWAV
-    check(bg_source != null, "original BGM WAV imports")
+    check(title_source != null, "hard-rock title theme WAV imports")
+    check(bg_source != null, "original driving BGM WAV imports")
     check(engine_source != null, "engine loop WAV imports")
     check(skid_source != null, "snow skid WAV imports")
+    check(title_source.format == AudioStreamWAV.FORMAT_16_BITS and title_source.mix_rate == 48000,
+        "title theme imports as local 48 kHz PCM instead of QOA")
     check(bg_source.format == AudioStreamWAV.FORMAT_16_BITS and bg_source.mix_rate == 48000,
-        "BGM imports as local 48 kHz PCM instead of QOA")
+        "driving BGM imports as local 48 kHz PCM instead of QOA")
     check(engine_source.format == AudioStreamWAV.FORMAT_16_BITS and engine_source.mix_rate == 48000,
         "engine loop imports as local 48 kHz PCM instead of QOA")
 
@@ -187,16 +191,25 @@ func _run() -> void:
     var master_bus := AudioServer.get_bus_index("Master")
     check(master_bus >= 0 and not AudioServer.is_bus_mute(master_bus),
         "Master audio bus is available and unmuted")
+    check(game_audio.current_music_path.ends_with("title_theme.wav"),
+        "title context starts the hard-rock theme")
     var bg_loop := game_audio.music.stream as AudioStreamWAV
     check(bg_loop != null and bg_loop.loop_mode == AudioStreamWAV.LOOP_FORWARD and bg_loop.loop_end > 0,
-        "background music has a non-zero forward loop range")
+        "title music has a non-zero forward loop range")
     await create_timer(0.25).timeout
     check(game_audio.music.playing and game_audio.music.get_playback_position() > 0.05,
-        "background music keeps playing instead of restarting as clicks")
+        "title theme keeps playing instead of restarting as clicks")
+    game_audio.play_drive_music()
+    await process_frame
+    check(game_audio.current_music_path.ends_with("pine_creek_radio.wav") and game_audio.music.playing,
+        "gameplay context switches from title metal to driving radio")
     game_audio.click()
     check(game_audio.ui != null and game_audio.ui.playing,
         "UI sound effect enters playing state")
 
+    car.linear_velocity = Vector3.ZERO
+    car.angular_velocity = Vector3.ZERO
+    car.set_controls(0.0,0.0,0.0,0.0)
     var runtime_vehicle_audio := PineVehicleAudio.new()
     runtime_vehicle_audio.attach_vehicle(car)
     root.add_child(runtime_vehicle_audio)
@@ -204,6 +217,9 @@ func _run() -> void:
     var engine_loop := runtime_vehicle_audio.engine.stream as AudioStreamWAV
     check(engine_loop != null and engine_loop.loop_end > 0,
         "engine audio has a non-zero loop range")
+    runtime_vehicle_audio._process(0.016)
+    check(runtime_vehicle_audio.snow.volume_db <= -79.0 and runtime_vehicle_audio.skid.volume_db <= -79.0,
+        "stationary vehicle gates road and skid hiss")
     await create_timer(0.25).timeout
     check(runtime_vehicle_audio.engine.playing and runtime_vehicle_audio.engine.get_playback_position() > 0.05,
         "engine loop keeps advancing instead of restarting as clicks")

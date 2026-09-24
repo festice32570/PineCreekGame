@@ -8,7 +8,7 @@ var skid: AudioStreamPlayer
 var horn: AudioStreamPlayer
 
 func _ready() -> void:
-    engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -7.0)
+    engine = _make_loop_player("Engine", "res://assets/audio/engine_idle.wav", -8.0)
     snow = _make_loop_player("SnowRoad", "res://assets/audio/snow_roll.wav", -40.0)
     skid = _make_loop_player("SnowSkid", "res://assets/audio/snow_skid.wav", -45.0)
 
@@ -53,17 +53,20 @@ func _process(delta: float) -> void:
     var forward_speed := absf(vehicle.get_forward_speed_kmh()) / 3.6
     var rpm_norm := clampf((forward_speed * 112.0 + throttle * 2100.0) / 4300.0, 0.0, 1.0)
 
-    engine.pitch_scale = lerpf(engine.pitch_scale, lerpf(0.78, 1.62, rpm_norm), 1.0 - exp(-5.0 * delta))
-    engine.volume_db = lerpf(-14.0, -4.5, clampf(0.18 + throttle * 0.72 + speed / 70.0, 0.0, 1.0))
+    engine.pitch_scale = lerpf(engine.pitch_scale, lerpf(0.92, 1.82, rpm_norm), 1.0 - exp(-5.0 * delta))
+    engine.volume_db = lerpf(-11.0, -3.5, clampf(0.18 + throttle * 0.72 + speed / 70.0, 0.0, 1.0))
 
     var road_amount := clampf(speed / 20.0, 0.0, 1.0)
-    snow.pitch_scale = lerpf(0.74, 1.28, road_amount)
-    snow.volume_db = lerpf(-42.0, -15.0, road_amount)
+    snow.pitch_scale = lerpf(0.78, 1.22, road_amount)
+    if speed < 1.15:
+        snow.volume_db = -80.0
+    else:
+        snow.volume_db = lerpf(-34.0, -16.0, clampf((road_amount - 0.05) / 0.95, 0.0, 1.0))
 
     var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
     var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)
     skid.pitch_scale = lerpf(0.82, 1.18, clampf(speed / 18.0, 0.0, 1.0))
-    skid.volume_db = lerpf(-45.0, -10.0, scrub)
+    skid.volume_db = -80.0 if scrub < 0.04 else lerpf(-32.0, -11.0, scrub)
 
 func shutdown() -> void:
     for p in [engine, snow, skid, horn]:

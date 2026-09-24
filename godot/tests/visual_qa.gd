@@ -49,6 +49,8 @@ func _run() -> void:
     await _capture("/home/festice/ChatGPT-dev/PineCreekGame/godot/build/qa-story-select.png")
     main._story_select_back()
     _check(main.title_layer.visible, "story selection returns to title")
+    _check(main.game_audio.current_music_path.ends_with("title_theme.wav"),
+        "title screen uses the hard-rock theme")
 
     # QA then follows the same title -> hidden stabilization -> game-start path
     # as the real game. The vehicle must not be exposed while physics settles.
@@ -59,6 +61,8 @@ func _run() -> void:
     for i in range(48):
         await physics_frame
     _check(main.game_started and car.visible, "vehicle becomes visible only after stabilization")
+    _check(main.game_audio.current_music_path.ends_with("pine_creek_radio.wav"),
+        "gameplay switches to the driving radio track")
     var spawn_y := car.global_position.y
     for i in range(24):
         await physics_frame
