@@ -61,7 +61,7 @@ func _process(delta: float) -> void:
     if speed < 1.15:
         snow.volume_db = -80.0
     else:
-        snow.volume_db = lerpf(-34.0, -16.0, clampf((road_amount - 0.05) / 0.95, 0.0, 1.0))
+        snow.volume_db = lerpf(-38.0, -20.0, clampf((road_amount - 0.05) / 0.95, 0.0, 1.0))
 
     var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
     var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)

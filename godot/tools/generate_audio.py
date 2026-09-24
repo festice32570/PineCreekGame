@@ -35,123 +35,7 @@ def env(t, attack, release, length):
     r = min(1.0, max(0.0, length - t) / max(0.001, release))
     return a * r
 
-# Pine Creek title theme: original hard-rock / heavy-metal instrumental.
-# 132 BPM, 16 bars. Synthesized offline and rendered to local PCM WAV.
-beat = 60.0 / 132.0
-bars = 16
-duration = bars * 4 * beat
-count = int(duration * RATE)
-L = [0.0] * count
-R = [0.0] * count
-
-def add_tone(buf_l, buf_r, start, length, freq, amp, pan=0.0, drive=1.0, decay=2.2):
-    i0 = max(0, int(start * RATE))
-    i1 = min(len(buf_l), int((start + length) * RATE))
-    for i in range(i0, i1):
-        tt = (i - i0) / RATE
-        e = env(tt, 0.004, min(0.09, length * 0.35), length) * math.exp(-tt * decay)
-        # Odd/even harmonics + soft clipping approximate an overdriven guitar.
-        x = (
-            math.sin(2*math.pi*freq*tt)
-            + 0.58*math.sin(2*math.pi*freq*2*tt + 0.10)
-            + 0.36*math.sin(2*math.pi*freq*3*tt + 0.35)
-            + 0.19*math.sin(2*math.pi*freq*5*tt + 0.75)
-        )
-        x = math.tanh(x * drive) * amp * e
-        lg = math.sqrt(max(0.0, (1.0 - pan) * 0.5))
-        rg = math.sqrt(max(0.0, (1.0 + pan) * 0.5))
-        buf_l[i] += x * lg
-        buf_r[i] += x * rg
-
-def add_power_chord(start, length, root, amp=0.13, muted=False):
-    d = 7.5 if muted else 2.0
-    a = amp * (0.72 if muted else 1.0)
-    add_tone(L, R, start, length, root, a, -0.58, 2.9, d)
-    add_tone(L, R, start, length, root*1.5, a*0.72, -0.58, 2.6, d)
-    add_tone(L, R, start+0.0027, length, root*1.006, a, 0.58, 3.0, d)
-    add_tone(L, R, start+0.0027, length, root*1.509, a*0.70, 0.58, 2.7, d)
-
-# Main riff: E - G - A - C/D turnaround. Deliberately original.
-E2, G2, A2, C3, D3 = 82.41, 98.00, 110.00, 130.81, 146.83
-riff = [E2,E2,G2,E2, A2,E2,C3,D3, E2,E2,G2,E2, A2,C3,D3,C3]
-step = beat / 2.0
-for bar in range(bars):
-    base = bar * beat * 4
-    for n in range(8):
-        root = riff[(bar*8+n) % len(riff)]
-        muted = (n not in [3,7])
-        add_power_chord(base+n*step, step*0.82, root, 0.105 if muted else 0.14, muted)
-
-# Bass follows quarter-note roots with a warm clipped low-end.
-for bar in range(bars):
-    base = bar * beat * 4
-    roots = [E2, G2 if bar % 4 == 1 else E2, A2 if bar % 4 == 2 else E2, D3/2 if bar % 4 == 3 else E2]
-    for q, root in enumerate(roots):
-        f = root / 2.0
-        start = base + q*beat
-        i0, i1 = int(start*RATE), min(count, int((start+beat*0.92)*RATE))
-        for i in range(i0, i1):
-            tt=(i-i0)/RATE
-            e=env(tt,0.006,0.10,beat*0.92)*math.exp(-tt*1.5)
-            x=math.sin(2*math.pi*f*tt)+0.34*math.sin(2*math.pi*f*2*tt)
-            x=math.tanh(x*1.8)*0.18*e
-            L[i]+=x*0.78; R[i]+=x*0.78
-
-# Drums: punchy kick/snare; cymbal noise exists only around explicit hits.
-for bar in range(bars):
-    base=bar*beat*4
-    for q in range(4):
-        start=base+q*beat
-        # kick
-        i0,i1=int(start*RATE),min(count,int((start+0.18)*RATE))
-        for i in range(i0,i1):
-            tt=(i-i0)/RATE
-            f=64.0-25.0*min(1.0,tt/0.16)
-            x=math.sin(2*math.pi*f*tt)*math.exp(-tt*20)*0.34
-            L[i]+=x; R[i]+=x
-        # snare on 2 and 4
-        if q in [1,3]:
-            ss=start
-            j0,j1=int(ss*RATE),min(count,int((ss+0.18)*RATE))
-            lp=0.0
-            for i in range(j0,j1):
-                tt=(i-j0)/RATE
-                raw=rng.random()*2-1
-                lp=lp*0.62+raw*0.38
-                tone=math.sin(2*math.pi*190*tt)*0.12
-                x=(lp*0.18+tone)*math.exp(-tt*17)
-                L[i]+=x*0.92; R[i]+=x
-    # eighth-note closed hats, short transients only
-    for h in range(8):
-        start=base+h*step
-        i0,i1=int(start*RATE),min(count,int((start+0.055)*RATE))
-        hp_prev=0.0
-        for i in range(i0,i1):
-            tt=(i-i0)/RATE
-            raw=rng.random()*2-1
-            hp=raw-hp_prev*0.55
-            hp_prev=raw
-            x=hp*math.exp(-tt*70)*0.030
-            L[i]+=x*0.72; R[i]+=x*0.90
-
-# Simple lead hook over the second half.
-lead = [329.63,392.00,440.00,392.00, 329.63,293.66,329.63,246.94]
-for bar in range(8,16):
-    base=bar*beat*4
-    for n,f in enumerate(lead):
-        if (bar+n) % 3 == 0:
-            continue
-        add_tone(L,R,base+n*step,step*0.72,f,0.045,0.18,1.55,2.8)
-
-# Tiny fade at loop seam to eliminate clicks without creating a long fade-in.
-seam = int(0.012*RATE)
-for i in range(seam):
-    a=i/max(1,seam-1)
-    L[i]*=a; R[i]*=a
-    L[-1-i]*=a; R[-1-i]*=a
-
-write_stereo("title_theme.wav", L, R)
-
+# Title loop is derived from the 3-minute full theme by make_title_loop.py.
 # Original looping road-radio instrumental: 8 bars, 90 BPM.
 beat = 60.0 / 90.0
 bars = 8
@@ -231,22 +115,46 @@ for i in range(int(duration*RATE)):
     samples.append(exhaust*0.30 + mechanical)
 write_mono("engine_idle.wav", samples)
 
-# Packed-snow rolling loop.
-duration = 4.0
-samples = []
-lp = 0.0
-for i in range(int(duration*RATE)):
-    t=i/RATE
-    raw=rng.random()*2-1
-    lp=lp*0.82+raw*0.18
-    granular = raw-lp
-    thump = max(0.0, math.sin(2*math.pi*2.3*t))**10
-    samples.append(granular*0.10 + lp*0.05 + thump*0.035)
-fade=int(0.18*RATE)
-for i in range(fade):
-    a=i/fade
-    samples[i] *= a
-    samples[-1-i] *= a
+# Packed-snow tyre loop: low rolling body plus discrete compressed-snow crunches.
+# No continuous white-noise bed; all high-frequency content exists in short grains.
+duration = 6.0
+count = int(duration * RATE)
+samples = [0.0] * count
+
+# Seamless low tyre/body rumble. All frequencies complete an integer number of
+# cycles in the six-second loop.
+for i in range(count):
+    t = i / RATE
+    weight = (
+        0.036 * math.sin(2*math.pi*42.0*t)
+        + 0.025 * math.sin(2*math.pi*67.0*t + 0.4)
+        + 0.014 * math.sin(2*math.pi*93.0*t + 1.1)
+    )
+    texture = 0.80 + 0.12*math.sin(2*math.pi*0.5*t) + 0.08*math.sin(2*math.pi*(5.0/6.0)*t + 0.7)
+    lug = max(0.0, math.sin(2*math.pi*2.0*t + 0.2))**10 * 0.012
+    samples[i] = weight * texture + lug
+
+# Crunch events approximate compacted snow breaking under tread blocks. Instead
+# of broadband hiss they use short clusters of inharmonic resonances. Circular
+# indexing keeps grains near the boundary seamless.
+centers = [0.18,0.64,1.11,1.73,2.29,2.94,3.37,4.03,4.58,5.17,5.72]
+for gi, center in enumerate(centers):
+    width = 0.040 + (gi % 4) * 0.008
+    amp = 0.040 + (gi % 3) * 0.008
+    freqs = [310 + gi*17, 540 + gi*23, 870 + gi*29, 1370 + gi*31]
+    phases = [0.2*gi, 0.7+0.11*gi, 1.5+0.07*gi, 2.2+0.13*gi]
+    radius = int(width * RATE)
+    center_i = int(center * RATE)
+    for o in range(-radius, radius + 1):
+        x = o / max(1, radius)
+        window = (1.0 - x*x) ** 2
+        idx = (center_i + o) % count
+        tt = o / RATE
+        grain = 0.0
+        for f, ph in zip(freqs, phases):
+            grain += math.sin(2*math.pi*f*tt + ph)
+        samples[idx] += grain * (amp / len(freqs)) * window
+
 write_mono("snow_roll.wav", samples)
 
 # Lateral tyre scrub / snow spray.

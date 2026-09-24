@@ -177,10 +177,17 @@ func _run() -> void:
     check(skid_source != null, "snow skid WAV imports")
     check(title_source.format == AudioStreamWAV.FORMAT_16_BITS and title_source.mix_rate == 48000,
         "title theme imports as local 48 kHz PCM instead of QOA")
+    check(absf(title_source.get_length() - 25.6) < 0.05,
+        "title loop is the 16-bar section derived from the full theme")
     check(bg_source.format == AudioStreamWAV.FORMAT_16_BITS and bg_source.mix_rate == 48000,
         "driving BGM imports as local 48 kHz PCM instead of QOA")
     check(engine_source.format == AudioStreamWAV.FORMAT_16_BITS and engine_source.mix_rate == 48000,
         "engine loop imports as local 48 kHz PCM instead of QOA")
+    var snow_source := load("res://assets/audio/snow_roll.wav") as AudioStreamWAV
+    check(snow_source != null and snow_source.format == AudioStreamWAV.FORMAT_16_BITS and snow_source.mix_rate == 48000,
+        "packed-snow loop imports as local 48 kHz PCM")
+    check(absf(snow_source.get_length() - 6.0) < 0.05,
+        "packed-snow loop uses the six-second granular tyre texture")
 
     # Runtime audio regression: imported streams are not enough; looping audio
     # must have a real non-zero loop end and must keep advancing after startup.

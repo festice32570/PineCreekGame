@@ -9,7 +9,7 @@ Pine Creekの約3分（3:00）のメインテーマです。
 
 実在バンドや既存楽曲のコピーではなく、Pine Creek専用のオリジナルです。ボーカルも外部録音素材ではなく、ローカル音声合成をDSPで低域化・歪ませてデスボイス風に加工しています。
 
-**Full WAV:** [PineCreek_MainTheme_IfItRunsItsACar.wav](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.4-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
+**Full WAV:** [PineCreek_MainTheme_IfItRunsItsACar.wav](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.5-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
 
 - Length: 3:00
 - Format: 48 kHz / 16-bit / stereo PCM WAV
@@ -60,11 +60,14 @@ Final:
 
 ## Game implementation plan
 
-このフル版はまだゲーム内の3分BGMとしては実装しません。
+フル版そのものは3分間ゲーム内で流さず、16小節のコーラス区間をゲーム用タイトルループとして切り出しています。
 
-先にフルテーマを聴いて方向性を確定し、その後に以下を別工程で行います。
+- `godot/tools/make_title_loop.py`
+- Source: full theme bar 24–39
+- Loop length: 25.6 seconds
+- Seam: 6 msだけデジタルゼロへ落としてクリックを防止
+- タイトル / ストーリー選択で使用
 
-1. フル版からゲーム向けの自然なループ区間を作る
-2. タイトル画面用ループへ差し替える
-3. 通常走行 / 事件 / 追跡 / 吹雪 / BBQ / 冬祭りなどの場面別BGMを増やす
-4. 雪路音は現在のノイズ系生成から、より実在感のある「低いタイヤ鳴り + 圧雪の粒立ち + 荷重変化」へ再設計する
+通常走行はPine Creek Radioへ切り替わります。今後のストーリー刷新では、事件 / 追跡 / 吹雪 / BBQ / 冬祭りなどの場面別BGMを追加する予定です。
+
+雪路音も同時に、連続ホワイトノイズ中心の旧方式から「低いタイヤ振動 + 圧雪が砕ける短い粒状音」へ再設計しました。
