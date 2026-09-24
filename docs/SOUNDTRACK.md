@@ -9,7 +9,7 @@ Pine Creekの約3分（3:00）のメインテーマです。
 
 実在バンドや既存楽曲のコピーではなく、Pine Creek専用のオリジナルです。ボーカルも外部録音素材ではなく、ローカル音声合成をDSPで低域化・歪ませてデスボイス風に加工しています。
 
-**Full WAV:** [PineCreek_MainTheme_IfItRunsItsACar.wav](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.7-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
+**Full WAV:** [PineCreek_MainTheme_IfItRunsItsACar.wav](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.8-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
 
 - Length: 3:00
 - Format: 48 kHz / 16-bit / stereo PCM WAV

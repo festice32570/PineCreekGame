@@ -714,7 +714,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.7 alpha  •  スポーン力蓄積修正 / 圧雪ピッチ固定"
+    note.text = "v0.8.8 alpha  •  圧雪テクスチャ自然化 / スポーン修正継続"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)

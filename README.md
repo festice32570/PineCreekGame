@@ -10,9 +10,18 @@
 
 ## 現在の開発版
 
-**v0.8.7-alpha1 — スポーン根治・圧雪サウンド修正版**
+**v0.8.8-alpha1 — 圧雪テクスチャ自然化版**
 
 従来のJava + 自前OpenGL版からGodot 4.7.2へ移行した新物理版を継続開発しています。旧実装は比較・検証用として `app/` に残していますが、主開発は `godot/` です。
+
+### v0.8.8-alpha1で変わったところ
+
+- 圧雪路音の「サッ、サッ」と単発で聞こえる粒を再設計
+- 9秒ループへ延長して繰り返し感を低減
+- 18–38msの小さな雪クランチを約45–110ms間隔で不規則に大量配置
+- 低域のタイヤ接地ラフネスを薄く連続させ、単発効果音ではなく「転がり続ける雪面」に近づけた
+- 大きめの圧雪クランチは間隔・音量をランダム化し、規則的な「サッサッ」を抑制
+- pitch 1.0固定とスポーン根治修正はv0.8.7の方式を継続
 
 ### v0.8.7-alpha1で変わったところ
 
@@ -115,14 +124,14 @@ Pine Creekのクレイジーさをそのまま3分のヘヴィメタルにした
 
 「IF IT RUNS, IT'S A CAR!」「KEVIN'S LOOSE AGAIN!」「CHECK ENGINE? — STILL RUNS! — THEN DRIVE!」など、ゲーム内の狂った町ルールをそのまま歌詞にしています。
 
-🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.7-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
+🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.8-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
 
 歌詞・制作方針・SHA-256は [docs/SOUNDTRACK.md](docs/SOUNDTRACK.md) を参照してください。
 v0.8.5-alpha1では、このフル版のコーラス16小節を25.6秒のタイトルループとしてゲームへ実装しています。
 
 ## 遊ぶだけなら
 
-GitHubの **Releases** から `PineCreek-Godot-v0.8.7-alpha1.apk` を取得してAndroidへインストールしてください。
+GitHubの **Releases** から `PineCreek-Godot-v0.8.8-alpha1.apk` を取得してAndroidへインストールしてください。
 
 このα版は旧Java版と共存できるよう、package IDを `com.pinecreek.game.godot` に分けています。
 

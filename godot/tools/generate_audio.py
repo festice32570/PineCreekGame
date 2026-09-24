@@ -115,60 +115,98 @@ for i in range(int(duration*RATE)):
     samples.append(exhaust*0.30 + mechanical)
 write_mono("engine_idle.wav", samples)
 
-# Packed-snow tyre loop: non-tonal low tyre rumble plus short snow-crunch grains.
-# Speed changes volume only in VehicleAudio.gd; this file is never pitch-shifted.
-duration = 6.0
+# Packed-snow tyre loop: continuous non-tonal tread texture with many tiny,
+# irregular snow fractures. Speed changes volume only; pitch stays fixed at 1.0.
+#
+# The previous sparse-grain version produced an obvious "sa... sa..." rhythm.
+# Real packed snow under a rolling tyre is closer to a low continuous rasp with
+# dozens of overlapping micro-crunches, plus occasional heavier compression.
+duration = 9.0
 count = int(duration * RATE)
 samples = [0.0] * count
-
-# Broad low-frequency tyre/body rumble. Filtered deterministic noise avoids the
-# musical sine-tone effect of the previous version while keeping hiss out of the
-# upper spectrum.
 local_rng = random.Random(32570)
-lp_fast = 0.0
-lp_slow = 0.0
+
+# Continuous tyre/snow contact bed. This is filtered noise rather than a sine or
+# raw white-noise bed: mostly low-mid energy, very little hiss above the useful
+# snow-crunch band.
+lp_low = 0.0
+lp_mid = 0.0
+lp_high = 0.0
+slow_env = 0.0
 for i in range(count):
     raw = local_rng.random() * 2.0 - 1.0
-    lp_fast += 0.014 * (raw - lp_fast)
-    lp_slow += 0.0028 * (raw - lp_slow)
-    rumble = (lp_fast - lp_slow * 0.72) * 0.12
-    t = i / RATE
-    # Slow load variation only changes loudness, not pitch.
-    load = 0.82 + 0.10*math.sin(2*math.pi*(2.0/6.0)*t + 0.6) + 0.06*math.sin(2*math.pi*(3.0/6.0)*t + 1.7)
-    samples[i] = rumble * load
+    lp_low += 0.0018 * (raw - lp_low)
+    lp_mid += 0.0180 * (raw - lp_mid)
+    lp_high += 0.0950 * (raw - lp_high)
+    slow_env += 0.0007 * ((abs(raw) * 2.0) - slow_env)
 
-# Discrete compressed-snow crunches. Each event is a short band-limited noise
-# burst rather than a resonant sine cluster, so acceleration cannot sound like
-# a rising musical scale.
-centers = [0.22,0.61,1.08,1.48,1.96,2.41,2.87,3.31,3.78,4.16,4.63,5.07,5.53]
-for gi, center in enumerate(centers):
-    width = 0.030 + (gi % 4) * 0.010
-    amp = 0.060 + (gi % 3) * 0.010
+    # Low rolling body + a subdued gritty band. Difference-of-lowpasses gives
+    # a broad non-tonal band without the "radio hiss" character of raw noise.
+    body = (lp_mid - lp_low * 0.82) * 0.080
+    grit = (lp_high - lp_mid) * 0.028
+    load = 0.86 + min(0.12, slow_env * 0.08)
+    samples[i] = (body + grit) * load
+
+# Dense micro-crunch bed: random 18–38 ms events every ~45–110 ms. They overlap
+# enough to read as rolling snow rather than separate "sa" hits.
+event_rng = random.Random(0xC0FFEE)
+center = 0.06
+grain_id = 0
+while center < duration - 0.06:
+    center += event_rng.uniform(0.045, 0.110)
+    width = event_rng.uniform(0.018, 0.038)
+    amp = event_rng.uniform(0.018, 0.036)
     radius = int(width * RATE)
     center_i = int(center * RATE)
-    grain_rng = random.Random(0x5100 + gi * 997)
-    lp1 = 0.0
-    lp2 = 0.0
-    grain_values = []
-    for j in range(radius * 2 + 1):
+    grain_rng = random.Random(0x7100 + grain_id * 1543)
+    g_lp_a = 0.0
+    g_lp_b = 0.0
+    for o in range(-radius, radius + 1):
         raw = grain_rng.random() * 2.0 - 1.0
-        lp1 += 0.22 * (raw - lp1)
-        lp2 += 0.055 * (raw - lp2)
-        grain_values.append((lp1 - lp2) * 0.92 + lp2 * 0.28)
-    for j, o in enumerate(range(-radius, radius + 1)):
+        g_lp_a += 0.28 * (raw - g_lp_a)
+        g_lp_b += 0.075 * (raw - g_lp_b)
+        band = (g_lp_a - g_lp_b * 0.92) + g_lp_b * 0.20
         x = o / max(1, radius)
         window = (1.0 - x*x) ** 2
         idx = center_i + o
         if 0 <= idx < count:
-            samples[idx] += grain_values[j] * amp * window
+            samples[idx] += band * amp * window
+    grain_id += 1
 
-# Tiny zero seam prevents a loop click; at six seconds it is not perceived as a
-# rhythmic gap.
-seam = int(0.012 * RATE)
+# Larger tread-compression events are quieter and softer than the old sparse
+# grains. They add weight but should not form a repeated rhythm.
+heavy_rng = random.Random(0xBADC0DE)
+center = 0.22
+heavy_id = 0
+while center < duration - 0.18:
+    center += heavy_rng.uniform(0.28, 0.72)
+    width = heavy_rng.uniform(0.055, 0.095)
+    amp = heavy_rng.uniform(0.020, 0.040)
+    radius = int(width * RATE)
+    center_i = int(center * RATE)
+    grain_rng = random.Random(0x9100 + heavy_id * 2089)
+    g_lp = 0.0
+    g_slow = 0.0
+    for o in range(-radius, radius + 1):
+        raw = grain_rng.random() * 2.0 - 1.0
+        g_lp += 0.12 * (raw - g_lp)
+        g_slow += 0.025 * (raw - g_slow)
+        crunch = (g_lp - g_slow * 0.70) + g_slow * 0.45
+        x = o / max(1, radius)
+        window = (1.0 - x*x) ** 3
+        idx = center_i + o
+        if 0 <= idx < count:
+            samples[idx] += crunch * amp * window
+    heavy_id += 1
+
+# Blend the tail toward the beginning instead of fading to silence. This keeps a
+# continuous tyre bed across the loop seam and avoids an audible rhythmic gap.
+seam = int(0.18 * RATE)
+head = samples[:seam]
 for i in range(seam):
     a = i / max(1, seam - 1)
-    samples[i] *= a
-    samples[-1-i] *= a
+    idx = count - seam + i
+    samples[idx] = samples[idx] * (1.0 - a) + head[i] * a
 
 write_mono("snow_roll.wav", samples)
 

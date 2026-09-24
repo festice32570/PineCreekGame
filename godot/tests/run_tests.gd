@@ -186,8 +186,8 @@ func _run() -> void:
     var snow_source := load("res://assets/audio/snow_roll.wav") as AudioStreamWAV
     check(snow_source != null and snow_source.format == AudioStreamWAV.FORMAT_16_BITS and snow_source.mix_rate == 48000,
         "packed-snow loop imports as local 48 kHz PCM")
-    check(absf(snow_source.get_length() - 6.0) < 0.05,
-        "packed-snow loop uses the six-second granular tyre texture")
+    check(absf(snow_source.get_length() - 9.0) < 0.05,
+        "packed-snow loop uses the nine-second dense granular tyre texture")
 
     # Runtime audio regression: imported streams are not enough; looping audio
     # must have a real non-zero loop end and must keep advancing after startup.
