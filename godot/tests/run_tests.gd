@@ -253,6 +253,27 @@ func _run() -> void:
     runtime_vehicle_audio.queue_free()
     game_audio.queue_free()
 
+    # Character prototype asset regression. These are intentionally lightweight
+    # low-poly GLBs generated from the shared Blender character pipeline.
+    for character_path in [
+        "res://assets/characters/protagonist.glb",
+        "res://assets/characters/bob.glb"
+    ]:
+        var character_scene := load(character_path) as PackedScene
+        check(character_scene != null, "character GLB imports: " + character_path)
+        if character_scene != null:
+            var character_root := character_scene.instantiate()
+            check(character_root.find_children("*", "MeshInstance3D", true, false).size() >= 12,
+                "character prototype contains modular visible parts: " + character_path)
+            check(character_root.find_children("*", "Skeleton3D", true, false).size() >= 1,
+                "character prototype carries shared humanoid skeleton: " + character_path)
+            character_root.free()
+    for portrait_path in [
+        "res://assets/portraits/protagonist_neutral.png",
+        "res://assets/portraits/bob_neutral.png"
+    ]:
+        check(load(portrait_path) is Texture2D, "character portrait imports: " + portrait_path)
+
     world.queue_free()
     await process_frame
 

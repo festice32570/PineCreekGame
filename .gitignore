@@ -3,6 +3,8 @@
 local.properties
 .idea/
 .DS_Store
+*.blend1
+*.blend2
 build/
 captures/
 .externalNativeBuild/

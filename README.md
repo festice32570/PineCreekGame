@@ -174,7 +174,7 @@ Godot版には現時点で**24話分の仮エピソードデータ**がありま
 
 今後は、日本から来た主人公、ボブ、ジム、町長、ケビン、黒い日本のセダンなどの継続要素を一本につなぎ、各話の結果が町に残る「シーズン1」へ大きく再構成します。
 
-全話一覧と現在の方針は [docs/STORIES.md](docs/STORIES.md) を参照してください。主要キャラクターの外見・低ポリ方針・ポートレート制作基準は [docs/CHARACTERS.md](docs/CHARACTERS.md) にまとめています。
+旧話と移行方針は [docs/STORIES.md](docs/STORIES.md)、新しい正史は [docs/SEASON1.md](docs/SEASON1.md) を参照してください。主要キャラクターの外見・低ポリ方針・ポートレート制作基準は [docs/CHARACTERS.md](docs/CHARACTERS.md)、広めの田舎マップ方針は [docs/MAP_DESIGN.md](docs/MAP_DESIGN.md)、容量管理は [docs/ASSET_STORAGE.md](docs/ASSET_STORAGE.md) にまとめています。
 
 ## 開発・ビルド
 
