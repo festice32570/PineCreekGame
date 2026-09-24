@@ -60,6 +60,14 @@ v0.9.0では以下へ変更しました。
 
 です。
 
+## Repository / CI
+
+- 旧Java/OpenGL版をビルドしていたGitHub Actions workflowを削除
+- 今後push時に旧Java CIは起動しない
+- 現行Godot版はLinuxローカルQA → 署名APK build → GitHub Releaseのみ
+- `app/`、root Gradle設定、旧Java SelfTestは開発履歴としてarchive保存
+- Java版へ新機能は追加せず、現行開発は `godot/` のみ
+
 ## Release channel
 
 - v0.8.x: 開発Pre-release履歴

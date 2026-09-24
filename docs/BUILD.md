@@ -1,6 +1,6 @@
 # Build Guide — Godot版
 
-現在の主開発版は `godot/` です。GitHub Actionsは必須ではなく、Linuxから直接APKを生成できます。
+現在の開発対象は `godot/` です。GitHub Actionsは使用せず、Linuxから直接QA・署名APK生成を行います。旧Java/OpenGL版はarchive扱いです。
 
 ## 検証済み環境
 
@@ -142,8 +142,10 @@ blender -b --python godot/tools/build_pickup.py
 godot/assets/vehicles/pine_creek_pickup.glb
 ```
 
-## 8. GitHub Actionsについて
+## 8. GitHub Actions / Legacy Java
 
-`.github/workflows/build-apk.yml` は旧Java/OpenGL版の回帰確認用です。Godot版は現在ローカルbuild/QAを正式経路としています。
+`.github/workflows/` は削除済みで、GitHub Actionsによる自動ビルドは行いません。
 
-将来CIをGodot版へ移す場合も、release keystoreやパスワードをリポジトリへ直接置かないでください。
+現行Godot版の正式経路は `./tools/qa_native.sh` → `./tools/build_android.sh` → git commit/push → GitHub Release です。
+
+旧Java/OpenGL版は `app/`、root Gradle設定、`tools/*.java` にarchiveとして残しますが、CI・Release・新機能開発の対象外です。詳細は `docs/LEGACY_JAVA.md` を参照してください。

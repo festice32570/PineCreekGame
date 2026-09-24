@@ -2,6 +2,11 @@
 
 ## 0.9.0 - 2026-09-25
 
+### Repository cleanup
+- 旧Java/OpenGL用GitHub Actions workflowを削除し、不要なpush CI failureを停止
+- `app/`、root Gradle設定、`tools/*.java` を読み取り専用archiveとして明文化
+- Testing / Architecture / Build / Releaseドキュメントを現行GodotローカルQA方式へ更新
+
 ### Release channel
 - GitHub ReleaseをPre-releaseから通常Releaseへ切替
 - 0.8.xのプレリリース群は開発履歴として残し、0.9.0以降を通常配布チャンネルとする

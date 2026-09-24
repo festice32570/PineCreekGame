@@ -1,6 +1,6 @@
 # Release Guide — Godot版
 
-Godot版ではGitHub Actionsを必須にしていません。現在はZorin/Linuxでテスト・release APK生成を行い、その確認済みAPKをGitHub Releaseへ公開します。
+Godot版ではGitHub Actionsを使用しません。Zorin/Linuxでテスト・release APK生成を行い、その確認済みAPKをGitHub Releaseへ公開します。旧Java/OpenGL版はarchiveとして残すだけで、CI・Release対象にはしません。
 
 **v0.9.0以降は `--prerelease` を付けず、通常のGitHub Releaseとして公開します。** 0.8.xのPre-releaseは開発履歴として残します。通常Release化はコンテンツ完成を意味せず、ストーリー・3Dモデル・マップ・NPC表現は引き続き開発中です。
 
@@ -48,6 +48,8 @@ pine_creek_keyart.png
 
 Release本文には `RELEASE_NOTES.md` の内容を使用します。
 
-## Legacy CI
+## CI / Legacy
 
-既存の `.github/workflows/build-apk.yml` はJava/OpenGL legacy版の確認用です。Godot版の正式リリースAPKをこのworkflowから作る必要はありません。
+`.github/workflows/` は削除済みです。pushによる自動CIはありません。
+
+旧Java/OpenGL版はarchiveとして残しますが、Release対象ではありません。詳細は `docs/LEGACY_JAVA.md` を参照してください。

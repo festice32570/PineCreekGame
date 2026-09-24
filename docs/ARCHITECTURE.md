@@ -1,102 +1,68 @@
-# Architecture
+# Architecture — Godot版
 
 ## 概要
 
-Pine CreekはAndroid標準APIとOpenGL ES 2.0を使った軽量構成です。
+現行Pine Creekは **Godot 4.7.2 / GDScript / RigidBody3D** を中心としたAndroid向け3Dドライブゲームです。
 
 ```text
-MainActivity
- ├─ タイトル / ストーリー選択 / HUD / タッチ操作
- ├─ SharedPreferences セーブ
- ├─ AudioEngine
- └─ GameSurface
-      └─ GameRenderer
-           ├─ ゲームループ
-           ├─ VehiclePhysics
-           ├─ ストーリー進行
-           ├─ 3Dワールド
-           └─ OpenGL ES描画
+Main.tscn
+ └─ Main.gd
+     ├─ VehicleController.gd   車両物理
+     ├─ ChaseCamera.gd         追従カメラ
+     ├─ TouchControls.gd       Androidマルチタッチ
+     ├─ VehicleAudio.gd        V8 / 圧雪 / skid / horn
+     ├─ GameAudio.gd           タイトルBGM / 走行BGM / UI音
+     └─ StoryDirector.gd       エピソード / ミッション進行
 ```
 
-## 車両物理
+## Main.gd
 
-v0.6では車両挙動を `VehiclePhysics.java` へ分離しました。
+タイトル、ストーリー選択、フリー走行、ストーリーモード、ポーズ、スポーン、道路復帰、HUD、BGMコンテキスト切替をまとめます。
 
-扱う状態:
+スポーンは車両を上空から落として馴染ませる方式ではありません。道路上の静止姿勢へ直接配置し、最初の運転入力までRigidBodyをfreezeします。
 
-- signed longitudinal speed
-- steering angle
-- wheelbase
-- heading
-- x / z position
+## VehicleController.gd
 
-基本はキネマティックなbicycle modelです。
+`RigidBody3D` に4輪RayCastサスペンションと簡易タイヤ力を組み合わせたアーケード寄り車両物理です。前後進は車体方向基準、前輪操舵、デジタル入力平滑化、高速舵角抑制、深雪グリップ低下を扱います。
+
+freeze中はサスペンション/タイヤforceを加えません。これはメニュー中にforceが蓄積して開始時に車が跳ね上がる問題を防ぐ必須ルールです。
+
+## TouchControls.gd
+
+Androidのpointer IDごとにタッチ状態を保持します。アクセル + ステア同時押し、バック、ブレーキ、ホーン、アクション、復帰、カメラドラッグを扱います。
+
+タイトル / ストーリー選択ではゲーム入力処理そのものを無効化し、ScrollContainerへタッチを渡します。
+
+## ChaseCamera.gd
+
+車体yawへ瞬間追従せず、少し遅れて追う三人称カメラです。画面ドラッグ中は一時的なorbitを加えます。
+
+## Audio
+
+`GameAudio.gd` はタイトルテーマ、Pine Creek Radio、UI音を扱います。`VehicleAudio.gd` はV8、圧雪ロードテクスチャ、前進高速スライド時だけのsnow-skid、ホーンを扱います。
+
+車両音はタイトルでは停止し、ゲーム開始後だけ有効です。圧雪音はpitch 1.0固定、snow-skidは通常のバック旋回では鳴りません。
+
+## StoryDirector.gd
+
+現在は24話のエピソードデータとミッション進行を担当します。ただし現行ストーリーは完成仕様ではなく、今後は一本につながったシーズン構成へ再設計します。
+
+## Build / Release
+
+GitHub Actionsは使用しません。
 
 ```text
-yawRate = speed / wheelbase * tan(steeringAngle)
+local Godot QA
+  -> signed Android release build
+  -> package/signature/version verification
+  -> Git commit/push
+  -> GitHub Release
 ```
 
-### アーケード向け補正
+詳細は `docs/BUILD.md` と `docs/RELEASE.md` を参照してください。
 
-実車シミュレータではなく、スマホで扱いやすい挙動を優先しています。
+## Legacy Java/OpenGL archive
 
-- 低速では大きく切れる
-- 高速では最大舵角を小さくする
-- ステアリング入力は瞬間的に最大舵角へ飛ばさずrate limit
-- 入力を離すとセルフセンタリング
-- 高速ほどyaw responseを弱める
-- 深雪ではグリップと最大舵角を落とす
-- 牽引中は速度と旋回性能を落とす
-- 前後速度の符号でバック時のyaw方向を自然に反転
-- 1フレームが長い場合は1/120秒単位へ分割して更新
+旧 `app/`、root Gradle設定、`tools/*.java` はv0.6.xまでの旧実装を保存するためのアーカイブです。
 
-## 自動テスト
-
-`tools/VehiclePhysicsSelfTest.java` をGitHub Actionsで実行します。
-
-現在確認しているもの:
-
-- 停車中にハンドルだけで車体が回らない
-- 前進左 / 前進右の旋回方向
-- バック左の車体向きと移動方向
-- ブレーキで逆方向へ速度が飛び越えない
-- 圧雪路最高速
-- 深雪が圧雪路より遅い
-- 牽引中の最高速
-- ハンドルのセルフセンタリング
-- 60Hz / 120Hzのシミュレーション差
-- 長時間ランダム入力でNaN / Infinityが発生しない
-
-## カメラ
-
-車体headingをそのままカメラへ直結せず、角度差を指数的に追従させています。
-
-速度に応じてFOVも少し広がります。
-
-## 描画
-
-外部3Dエンジンを使わず、自前のmeshをOpenGL ESへ送っています。
-
-基本mesh:
-
-- cube
-- pyramid
-- cylinder
-
-ピックアップは複数プリミティブを組み合わせています。
-
-## AudioEngine
-
-BGM・風・エンジン・警笛・イベント音はJavaコードでPCM波形を生成しています。
-
-## セーブ
-
-SharedPreferencesに保存:
-
-- campaign
-- stage
-- x / z
-- heading
-- signed speed
-- fuel
-- special story state
+**現行ゲームのアーキテクチャではなく、CI対象でもありません。** 詳細は `docs/LEGACY_JAVA.md` を参照してください。

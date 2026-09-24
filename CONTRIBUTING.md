@@ -25,13 +25,14 @@ git checkout -b feature/better-snow
 
 - 現行: Godot 4.7.2 / GDScript
 - JDK 17 / Android SDK 36
-- `app/` のJava/OpenGL版はlegacy
+- `app/` とroot Gradle/Java関連は読み取り専用archive。新機能は追加しない
 - 駆動方向にカメラ向きを使わない
 - タッチ操作はマルチタッチを壊さない
 - 実在メーカーのロゴ・車名・無断素材を持ち込まない
 - 人物・町・車両は架空として扱う
 - UI / ストーリーは日本語を基本にする
 - 新規アセットは出所とライセンスを明記する
+- GitHub Actionsは使わない。QA/buildは `godot/tools/` のローカルスクリプトを使う
 - release keystoreやパスワードをcommitしない
 
 ## Pull Request前
