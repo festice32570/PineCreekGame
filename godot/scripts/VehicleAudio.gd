@@ -83,9 +83,14 @@ func _process(delta: float) -> void:
         snow.volume_db = lerpf(-38.0, -22.0, snow_mix)
 
     var lateral := absf(vehicle.linear_velocity.dot(vehicle.global_transform.basis.x.normalized()))
-    var scrub := clampf((lateral - 0.75) / 4.5, 0.0, 1.0) * clampf(speed / 5.0, 0.0, 1.0)
-    skid.pitch_scale = lerpf(0.82, 1.18, clampf(speed / 18.0, 0.0, 1.0))
-    skid.volume_db = -80.0 if scrub < 0.04 else lerpf(-32.0, -11.0, scrub)
+    var signed_forward_speed := vehicle.get_forward_speed_kmh() / 3.6
+    # Snow scrub is only useful as a higher-speed forward slide cue. In reverse,
+    # ordinary steering naturally creates lateral velocity and used to trigger
+    # the old harsh snow-skid loop, which sounded like a forgotten legacy SFX.
+    var forward_slide_gate := clampf((signed_forward_speed - 3.5) / 5.0, 0.0, 1.0)
+    var scrub := clampf((lateral - 0.95) / 4.5, 0.0, 1.0) * forward_slide_gate
+    skid.pitch_scale = 1.0
+    skid.volume_db = -80.0 if scrub < 0.05 else lerpf(-38.0, -18.0, scrub)
 
 func shutdown() -> void:
     set_driving_enabled(false)

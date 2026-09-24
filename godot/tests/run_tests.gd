@@ -238,6 +238,14 @@ func _run() -> void:
         "packed-snow texture stays well below the V8 in the driving mix")
     check(absf(runtime_vehicle_audio.snow.pitch_scale - 1.0) < 0.001,
         "packed-snow texture never pitch-shifts into a rising musical tone")
+    car.linear_velocity = Vector3(2.0,0.0,-6.0)
+    runtime_vehicle_audio._process(0.016)
+    check(runtime_vehicle_audio.skid.volume_db <= -79.0,
+        "reverse steering/slip never triggers the legacy snow-skid layer")
+    car.linear_velocity = Vector3(3.5,0.0,9.0)
+    runtime_vehicle_audio._process(0.016)
+    check(runtime_vehicle_audio.skid.volume_db > -79.0 and absf(runtime_vehicle_audio.skid.pitch_scale - 1.0) < 0.001,
+        "forward high-speed lateral slide keeps a subtle non-pitched scrub cue")
     car.linear_velocity = Vector3.ZERO
     await create_timer(0.25).timeout
     check(runtime_vehicle_audio.engine.playing and runtime_vehicle_audio.engine.get_playback_position() > 0.05,
