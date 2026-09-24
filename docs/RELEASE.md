@@ -24,7 +24,7 @@ cd godot
 ## 3. 出力確認
 
 ```bash
-sha256sum build/PineCreek-Godot-v0.9.0.apk
+sha256sum build/PineCreek-Godot-v0.9.1.apk
 ```
 
 署名鍵は `~/.config/pinecreek/` 等のリポジトリ外に保存し、絶対にcommitしません。
@@ -39,8 +39,8 @@ sha256sum build/PineCreek-Godot-v0.9.0.apk
 tagとReleaseを作り、以下をAssetsへ添付します。
 
 ```text
-PineCreek-Godot-v0.9.0.apk
-PineCreek-Godot-v0.9.0.apk.sha256
+PineCreek-Godot-v0.9.1.apk
+PineCreek-Godot-v0.9.1.apk.sha256
 PineCreek_MainTheme_IfItRunsItsACar.wav
 PineCreek_MainTheme_IfItRunsItsACar.wav.sha256
 pine_creek_keyart.png

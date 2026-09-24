@@ -10,9 +10,24 @@
 
 ## 現在の開発版
 
-**v0.9.0 — 車両基盤安定版 / 正式リリース運用開始**
+**v0.9.1 — 田舎マップ / Season 1 テスト版**
 
 従来のJava + 自前OpenGL版からGodot 4.7.2へ移行しています。**現行開発は `godot/` のみ**です。旧 `app/` とGradle/Java関連は開発履歴を残すための読み取り専用アーカイブとして保持しています。
+
+### v0.9.1で変わったところ
+
+- 約4.5 km × 4.5 kmの田舎型grayboxへ拡張し、約15.4 kmの道路網を実装
+- Town core、Bob中古車店、主人公宅、Jim garage、Public Works、森林/雪原などを数百m〜km単位で分散
+- 260本相当の遠景樹木をMultiMesh化し、広さを増やしてもAndroid向けnode数を抑制
+- 復帰処理を固定2道路方式から、全road segmentの最寄りcenterlineを選ぶ方式へ変更
+- Season 1 第1話「走れば車だ」を最初の新正史vertical sliceとして実装開始
+- 精密駐車枠をやめ、広いイベントエリアへ変更
+- drive到達・horn確認を含むBobの試運転フローを追加
+- Blender版Bobを実際の中古車店へ配置し、同じ3Dモデルから生成した会話portraitをゲームUIへ表示
+- 1km以上離れた森林道路でも車両physicsが安定して走れることをnative QAで確認
+- 旧24話は移行用placeholderとして残し、Season 1へ段階的に置換
+
+> **テスト版について:** v0.9.1は通常GitHub Releaseとして配布しますが、広い新マップとSeason 1移行の実機確認用です。建物・人物・道路景観はgraybox/仮モデルが多く、完成版アートではありません。
 
 ### v0.9.0で変わったところ
 
@@ -141,14 +156,14 @@ Pine Creekのクレイジーさをそのまま3分のヘヴィメタルにした
 
 「IF IT RUNS, IT'S A CAR!」「KEVIN'S LOOSE AGAIN!」「CHECK ENGINE? — STILL RUNS! — THEN DRIVE!」など、ゲーム内の狂った町ルールをそのまま歌詞にしています。
 
-🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.9.0/PineCreek_MainTheme_IfItRunsItsACar.wav)
+🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.9.1/PineCreek_MainTheme_IfItRunsItsACar.wav)
 
 歌詞・制作方針・SHA-256は [docs/SOUNDTRACK.md](docs/SOUNDTRACK.md) を参照してください。
 v0.8.5-alpha1では、このフル版のコーラス16小節を25.6秒のタイトルループとしてゲームへ実装しています。
 
 ## 遊ぶだけなら
 
-GitHubの **Releases** から `PineCreek-Godot-v0.9.0.apk` を取得してAndroidへインストールしてください。
+GitHubの **Releases** から `PineCreek-Godot-v0.9.1.apk` を取得してAndroidへインストールしてください。
 
 Godot版は旧Java版と共存できるよう、package IDを `com.pinecreek.game.godot` に分けています。v0.9.0からGitHub上では通常Releaseとして配布しますが、ストーリー・モデル・マップなどの内容面は引き続き開発途中です。
 

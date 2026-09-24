@@ -1,7 +1,6 @@
 extends Node3D
 
-const ROAD_RESCUE_Y := 0.60
-const START_POINT := Vector3(0.0, ROAD_RESCUE_Y, 22.0)
+const ROAD_RESCUE_Y := PineWorldLayout.VEHICLE_REST_Y
 
 enum PlayMode { MENU, STORY, FREE }
 
@@ -20,6 +19,7 @@ var pause_button: Button
 var story: PineStoryDirector
 var objective_label: Label
 var dialogue_label: Label
+var dialogue_portrait: TextureRect
 var mission_marker: Node3D
 var game_started := false
 var game_paused := false
@@ -78,39 +78,161 @@ func _build_environment() -> void:
     sun.shadow_enabled = true
     add_child(sun)
 
-    _make_surface("SnowGround", Vector3(0,-0.28,0), Vector3(80,0.5,180), Color("#d7e3ea"), 0.42)
-    _make_surface("PackedSnowRoad", Vector3(0,0.00,0), Vector3(9.0,0.10,150), Color("#7f8d96"), 0.86)
-    _make_surface("CrossRoad", Vector3(0,0.005,-24), Vector3(55,0.09,8), Color("#7f8d96"), 0.84)
-    _make_road_details()
+    # Rural-scale graybox: one cheap snow field, modular road segments and
+    # widely separated landmarks. The physical map is large without requiring
+    # large textures or a monolithic terrain mesh.
+    var world_size := PineWorldLayout.MAP_HALF_SIZE * 2.0
+    _make_surface("RuralSnowGround",Vector3(0,-0.28,0),Vector3(world_size,0.5,world_size),Color("#d7e3ea"),0.42)
+    for road in PineWorldLayout.road_segments():
+        _make_road_segment(road["name"],road["a"],road["b"],float(road["width"]))
 
-    for z in range(-60,61,12):
-        _make_snowbank(Vector3(-5.2,0.25,float(z)))
-        _make_snowbank(Vector3(5.2,0.25,float(z)))
-    for i in range(18):
-        var side := -1.0 if i % 2 == 0 else 1.0
-        _make_tree(Vector3(side*(9.0+float((i*7)%8)),0.0,-65.0+float(i*8)))
+    # Town core: intentionally compact. Most of the map is the empty distance
+    # between this cluster and the rural homes/garages/outskirts.
+    _make_building(Vector3(PineWorldLayout.BBQ.x,1.65,PineWorldLayout.BBQ.z),Vector3(14,3.3,10),Color("#8a3330"),"PINE CREEK FAMILY BBQ")
+    _make_building(Vector3(PineWorldLayout.TOWN_HALL.x,1.8,PineWorldLayout.TOWN_HALL.z),Vector3(12,3.6,11),Color("#596b78"),"TOWN HALL")
+    _make_building(Vector3(PineWorldLayout.TOWN_HALL_2.x,1.55,PineWorldLayout.TOWN_HALL_2.z),Vector3(9,3.1,8),Color("#536474"),"TOWN HALL ANNEX")
+    _make_building(Vector3(PineWorldLayout.TOWN_HALL_3.x,1.45,PineWorldLayout.TOWN_HALL_3.z),Vector3(8,2.9,7),Color("#64717a"),"OLD TOWN HALL")
+    _make_building(Vector3(PineWorldLayout.GAS_STATION.x,1.55,PineWorldLayout.GAS_STATION.z),Vector3(12,3.1,9),Color("#516b63"),"GAS & COFFEE")
+    _make_building(Vector3(PineWorldLayout.GENERAL_STORE.x,1.55,PineWorldLayout.GENERAL_STORE.z),Vector3(11,3.1,8),Color("#75624d"),"GENERAL / TOOLS")
 
-    for z in range(-52,53,18):
-        var side_x := -5.4 if int(z / 18) % 2 == 0 else 5.4
-        _make_streetlamp(Vector3(side_x,0.0,float(z)))
+    # Rural landmarks. These are hundreds of metres apart by design.
+    _make_building(Vector3(PineWorldLayout.BOB.x,1.7,PineWorldLayout.BOB.z),Vector3(18,3.4,12),Color("#6c5542"),"BOB'S USED CARS")
+    _make_building(Vector3(PineWorldLayout.PROTAGONIST_HOME.x,1.5,PineWorldLayout.PROTAGONIST_HOME.z),Vector3(10,3.0,9),Color("#6b7781"),"YOUR HOUSE")
+    _make_building(Vector3(PineWorldLayout.JIM.x,1.75,PineWorldLayout.JIM.z),Vector3(16,3.5,13),Color("#5b4b43"),"JIM'S GARAGE")
+    _make_building(Vector3(PineWorldLayout.PUBLIC_WORKS.x,1.8,PineWorldLayout.PUBLIC_WORKS.z),Vector3(18,3.6,13),Color("#465764"),"PUBLIC WORKS")
 
-    _make_building(Vector3(-13,1.65,-21), Vector3(9,3.3,7), Color("#8a3330"), "PINE CREEK FAMILY BBQ")
-    _make_building(Vector3(14,1.8,-4), Vector3(8,3.6,8), Color("#596b78"), "町役場")
-    _make_building(Vector3(-13,1.45,18), Vector3(7,2.9,6), Color("#6c5542"), "BOB'S USED CARS")
-    _make_building(Vector3(13,1.55,13), Vector3(7,3.1,6), Color("#516b63"), "GAS & COFFEE")
-    _make_building(Vector3(13,1.65,30), Vector3(8,3.3,7), Color("#5b4b43"), "JIM'S GARAGE")
-    _make_building(Vector3(14,1.55,-37), Vector3(9,3.1,7), Color("#465764"), "PUBLIC WORKS")
-    _make_building(Vector3(-12,1.35,49), Vector3(6,2.7,6), Color("#7a5e4f"), "HOUSE 11")
-    _make_building(Vector3(12,1.35,49), Vector3(6,2.7,6), Color("#66764e"), "HOUSE 12")
+    # Low-density residential clusters around the core.
+    for data in [
+        [Vector3(-410,1.35,360),Color("#7a5e4f"),"HOUSE 01"],
+        [Vector3(-420,1.35,590),Color("#66764e"),"HOUSE 02"],
+        [Vector3(420,1.35,360),Color("#74685b"),"HOUSE 03"],
+        [Vector3(430,1.35,590),Color("#5f735d"),"HOUSE 04"],
+        [Vector3(-430,1.35,-315),Color("#78614f"),"HOUSE 05"],
+        [Vector3(-430,1.35,-455),Color("#5d6c75"),"HOUSE 06"],
+        [Vector3(470,1.35,-315),Color("#74604f"),"HOUSE 07"],
+        [Vector3(470,1.35,-455),Color("#657758"),"HOUSE 08"]
+    ]:
+        _make_building(data[0],Vector3(7,2.7,7),data[1],data[2])
 
-    # Town props make story locations visible before dialogue is triggered.
-    _make_parked_pickup(Vector3(-15.5,0.54,20.5), -18.0)
-    _make_parked_pickup(Vector3(16.8,0.54,31.5), 165.0)
-    _make_parked_pickup(Vector3(17.0,0.54,-39.0), 10.0)
-    _make_turkey(Vector3(10.5,0.0,-2.0))
-    _make_snowman(Vector3(11.7,0.0,-7.0), 1.0)
-    _make_snowman(Vector3(13.0,0.0,-7.3), 0.92)
-    _make_snowman(Vector3(14.3,0.0,-7.0), 1.08)
+    # Only the town core gets regular streetlights. Darkness/emptiness begins
+    # quickly outside it, which is part of the rural scale.
+    for z in range(-540,701,120):
+        _make_streetlamp(Vector3(-6.0,0.0,float(z)))
+    for x in range(-660,781,140):
+        _make_streetlamp(Vector3(float(x),0.0,6.0))
+
+    # Sparse snowbanks in town; country roads stay visually open.
+    for z in range(-520,681,100):
+        _make_snowbank(Vector3(-6.2,0.22,float(z)))
+        _make_snowbank(Vector3(6.2,0.22,float(z)))
+
+    # Rural forest is a pair of MultiMeshes instead of hundreds of nodes.
+    var tree_positions: Array[Vector3] = []
+    var rng := RandomNumberGenerator.new()
+    rng.seed = 32570
+    for i in range(260):
+        var x := 0.0
+        var z := 0.0
+        if i < 90:
+            x = rng.randf_range(-2180.0,-1450.0)
+            z = rng.randf_range(-1800.0,1950.0)
+        elif i < 190:
+            x = rng.randf_range(1250.0,2180.0)
+            z = rng.randf_range(-1700.0,2100.0)
+        else:
+            x = rng.randf_range(-850.0,950.0)
+            z = rng.randf_range(1500.0,2180.0)
+        tree_positions.append(Vector3(x,0.0,z))
+    _make_tree_multimesh(tree_positions)
+
+    # Story/vehicle props visible during the graybox phase.
+    _make_parked_pickup(PineWorldLayout.BOB + Vector3(-15,0.54,8),-35.0)
+    _make_parked_pickup(PineWorldLayout.JIM + Vector3(15,0.54,8),165.0)
+    _make_parked_pickup(PineWorldLayout.PUBLIC_WORKS + Vector3(18,0.54,-3),15.0)
+    _make_turkey(PineWorldLayout.TOWN_HALL + Vector3(-8,0,8))
+    _make_character_npc("res://assets/characters/bob.glb",PineWorldLayout.BOB + Vector3(8,0,7),145.0,"BOB")
+
+func _make_road_segment(name: String, a: Vector3, b: Vector3, width: float) -> void:
+    var delta := b-a
+    var length := Vector2(delta.x,delta.z).length()
+    if length < 0.1:
+        return
+    var body := StaticBody3D.new()
+    body.name = name.replace(" ","_")
+    body.position = Vector3((a.x+b.x)*0.5,0.01,(a.z+b.z)*0.5)
+    body.rotation.y = atan2(delta.x,delta.z)
+    body.set_meta("grip",0.86)
+
+    var mesh := MeshInstance3D.new()
+    var bm := BoxMesh.new()
+    bm.size = Vector3(width,0.10,length)
+    mesh.mesh = bm
+    mesh.material_override = _simple_material(Color("#7f8d96"),0.96)
+    body.add_child(mesh)
+
+    var cs := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(width,0.10,length)
+    cs.shape = shape
+    body.add_child(cs)
+    add_child(body)
+
+func _make_tree_multimesh(positions: Array[Vector3]) -> void:
+    if positions.is_empty():
+        return
+    var trunk_mesh := BoxMesh.new()
+    trunk_mesh.size = Vector3(0.36,2.2,0.36)
+    var trunk_mm := MultiMesh.new()
+    trunk_mm.transform_format = MultiMesh.TRANSFORM_3D
+    trunk_mm.mesh = trunk_mesh
+    trunk_mm.instance_count = positions.size()
+
+    var crown_mesh := CylinderMesh.new()
+    crown_mesh.top_radius = 0.0
+    crown_mesh.bottom_radius = 1.3
+    crown_mesh.height = 3.4
+    crown_mesh.radial_segments = 8
+    var crown_mm := MultiMesh.new()
+    crown_mm.transform_format = MultiMesh.TRANSFORM_3D
+    crown_mm.mesh = crown_mesh
+    crown_mm.instance_count = positions.size()
+
+    for i in range(positions.size()):
+        var scale_factor := 0.80 + float((i*37)%31)/100.0
+        var basis := Basis.IDENTITY.scaled(Vector3.ONE*scale_factor)
+        trunk_mm.set_instance_transform(i,Transform3D(basis,positions[i]+Vector3(0,1.1*scale_factor,0)))
+        crown_mm.set_instance_transform(i,Transform3D(basis,positions[i]+Vector3(0,3.1*scale_factor,0)))
+
+    var trunks := MultiMeshInstance3D.new()
+    trunks.name = "RuralTreeTrunks"
+    trunks.multimesh = trunk_mm
+    trunks.material_override = _simple_material(Color("#3b2d25"),0.96)
+    add_child(trunks)
+
+    var crowns := MultiMeshInstance3D.new()
+    crowns.name = "RuralTreeCrowns"
+    crowns.multimesh = crown_mm
+    crowns.material_override = _simple_material(Color("#153f38"),0.96)
+    add_child(crowns)
+
+func _make_character_npc(path: String, pos: Vector3, yaw_deg: float, display_name: String) -> void:
+    var packed := load(path) as PackedScene
+    if packed == null:
+        return
+    var root := Node3D.new()
+    root.name = display_name
+    root.position = pos
+    root.rotation_degrees.y = yaw_deg
+    var visual := packed.instantiate() as Node3D
+    root.add_child(visual)
+    var label := Label3D.new()
+    label.text = display_name
+    label.position = Vector3(0,2.35,0)
+    label.font_size = 30
+    label.outline_size = 6
+    label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    root.add_child(label)
+    add_child(root)
 
 func _make_surface(name: String, pos: Vector3, size3: Vector3, color: Color, grip: float) -> void:
     var body := StaticBody3D.new()
@@ -461,7 +583,7 @@ func _build_vehicle() -> void:
     vehicle = PineVehicle.new()
     vehicle.name = "PlayerPickup"
     vehicle.freeze = true
-    vehicle.position = START_POINT
+    vehicle.global_transform = PineWorldLayout.start_transform()
     vehicle.visible = false
     add_child(vehicle)
 
@@ -526,6 +648,15 @@ func _build_ui() -> void:
     layer.add_child(objective_label)
     objective_label.visible = false
 
+    dialogue_portrait = TextureRect.new()
+    dialogue_portrait.position = Vector2(208,8)
+    dialogue_portrait.size = Vector2(136,136)
+    dialogue_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    dialogue_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    dialogue_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    dialogue_portrait.visible = false
+    layer.add_child(dialogue_portrait)
+
     dialogue_label = Label.new()
     dialogue_label.position = Vector2(350,22)
     dialogue_label.size = Vector2(580,94)
@@ -579,45 +710,45 @@ func _build_story() -> void:
     marker_mat.albedo_color = Color("#ffd34f")
     marker_mat.emission_enabled = true
     marker_mat.emission = Color("#ffb52e")
-    marker_mat.emission_energy_multiplier = 2.4
+    marker_mat.emission_energy_multiplier = 2.0
     marker_mat.roughness = 0.72
 
     var fill_mat := StandardMaterial3D.new()
     fill_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    fill_mat.albedo_color = Color(1.0,0.72,0.12,0.24)
+    fill_mat.albedo_color = Color(1.0,0.72,0.12,0.16)
     fill_mat.emission_enabled = true
     fill_mat.emission = Color("#ffb52e")
-    fill_mat.emission_energy_multiplier = 0.75
+    fill_mat.emission_energy_multiplier = 0.45
     fill_mat.roughness = 0.82
 
-    var parking_fill := MeshInstance3D.new()
-    var fill_mesh := BoxMesh.new()
-    fill_mesh.size = Vector3(3.46,0.012,6.32)
-    parking_fill.mesh = fill_mesh
-    parking_fill.position = Vector3(0,0.012,0)
-    parking_fill.material_override = fill_mat
-    mission_marker.add_child(parking_fill)
+    # Season 1 uses broad event zones rather than precision parking bays.
+    var event_fill := MeshInstance3D.new()
+    event_fill.name = "EventZoneFill"
+    var event_mesh := CylinderMesh.new()
+    event_mesh.top_radius = 5.5
+    event_mesh.bottom_radius = 5.5
+    event_mesh.height = 0.018
+    event_mesh.radial_segments = 32
+    event_fill.mesh = event_mesh
+    event_fill.position = Vector3(0,0.018,0)
+    event_fill.material_override = fill_mat
+    mission_marker.add_child(event_fill)
 
-    # Roadside destination is drawn as a real parking bay instead of a beacon
-    # placed inside the destination building.
-    for x in [-1.7, 1.7]:
-        var side := MeshInstance3D.new()
-        var side_mesh := BoxMesh.new()
-        side_mesh.size = Vector3(0.22,0.035,6.4)
-        side.mesh = side_mesh
-        side.position = Vector3(float(x),0.025,0)
-        side.material_override = marker_mat
-        mission_marker.add_child(side)
-    for z in [-3.2, 3.2]:
-        var end_line := MeshInstance3D.new()
-        var end_mesh := BoxMesh.new()
-        end_mesh.size = Vector3(3.62,0.035,0.22)
-        end_line.mesh = end_mesh
-        end_line.position = Vector3(0,0.025,float(z))
-        end_line.material_override = marker_mat
-        mission_marker.add_child(end_line)
+    # Four low posts make the edge readable against snow without demanding an
+    # exact stop angle or parking position.
+    for offset in [Vector3(-5.4,0,-5.4),Vector3(5.4,0,-5.4),Vector3(-5.4,0,5.4),Vector3(5.4,0,5.4)]:
+        var post := MeshInstance3D.new()
+        var post_mesh := CylinderMesh.new()
+        post_mesh.top_radius = 0.07
+        post_mesh.bottom_radius = 0.07
+        post_mesh.height = 0.72
+        post.mesh = post_mesh
+        post.position = offset + Vector3(0,0.36,0)
+        post.material_override = marker_mat
+        mission_marker.add_child(post)
 
     var arrow := MeshInstance3D.new()
+    arrow.name = "EventZonePointer"
     var arrow_mesh := CylinderMesh.new()
     arrow_mesh.top_radius = 0.0
     arrow_mesh.bottom_radius = 0.46
@@ -629,7 +760,7 @@ func _build_story() -> void:
     mission_marker.add_child(arrow)
 
     var label := Label3D.new()
-    label.text = "目的地\n黄色い駐車枠"
+    label.text = "イベントエリア"
     label.font_size = 34
     label.outline_size = 8
     label.position = Vector3(0,3.35,0)
@@ -644,7 +775,18 @@ func _on_objective_changed(chapter: String, objective: String) -> void:
 func _on_dialogue_requested(speaker: String, line: String) -> void:
     dialogue_label.text = speaker + "： " + line
     dialogue_label.visible = true
+    if dialogue_portrait != null:
+        dialogue_portrait.texture = _portrait_for_speaker(speaker)
+        dialogue_portrait.visible = dialogue_portrait.texture != null
     _dialogue_hide_at = Time.get_ticks_msec() / 1000.0 + 5.0
+
+func _portrait_for_speaker(speaker: String) -> Texture2D:
+    match speaker:
+        "ボブ":
+            return load("res://assets/portraits/bob_neutral.png") as Texture2D
+        "主人公":
+            return load("res://assets/portraits/protagonist_neutral.png") as Texture2D
+    return null
 
 func _on_marker_changed(pos: Vector3, visible_now: bool) -> void:
     mission_marker.global_position = pos
@@ -714,7 +856,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.9.0  •  正式リリース運用 / 車両基盤安定版"
+    note.text = "v0.9.1  •  田舎マップ / Season 1テスト版"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -867,6 +1009,8 @@ func _set_game_ui_visible(visible_now: bool) -> void:
     pause_button.visible = visible_now
     if not visible_now:
         dialogue_label.visible = false
+        if dialogue_portrait != null:
+            dialogue_portrait.visible = false
 
 func _teleport_vehicle(target_transform: Transform3D) -> void:
     vehicle.freeze = true
@@ -889,15 +1033,7 @@ func _teleport_vehicle(target_transform: Transform3D) -> void:
         chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
 
 func _nearest_road_rescue_transform(from_pos: Vector3) -> Transform3D:
-    var main_point := Vector3(0.0, ROAD_RESCUE_Y, clampf(from_pos.z,-68.0,68.0))
-    var cross_point := Vector3(clampf(from_pos.x,-24.0,24.0), ROAD_RESCUE_Y, -24.0)
-
-    var main_distance := Vector2(from_pos.x - main_point.x, from_pos.z - main_point.z).length()
-    var cross_distance := Vector2(from_pos.x - cross_point.x, from_pos.z - cross_point.z).length()
-
-    if cross_distance + 0.5 < main_distance:
-        return Transform3D(Basis(Vector3.UP, PI * 0.5), cross_point)
-    return Transform3D(Basis.IDENTITY, main_point)
+    return PineWorldLayout.nearest_road_transform(from_pos)
 
 func _reset_vehicle_to_road() -> void:
     if vehicle == null:
@@ -957,7 +1093,7 @@ func _prepare_vehicle_for_start() -> void:
     vehicle.visible = false
     vehicle.freeze = true
     vehicle.sleeping = true
-    vehicle.global_transform = Transform3D(Basis.IDENTITY, START_POINT)
+    vehicle.global_transform = PineWorldLayout.start_transform()
     vehicle.linear_velocity = Vector3.ZERO
     vehicle.angular_velocity = Vector3.ZERO
     vehicle.steering_state = 0.0

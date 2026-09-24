@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.1 - 2026-09-25
+
+### Rural graybox
+- 約4.5 km × 4.5 kmの走行可能snow fieldへ拡張
+- 23本のmodular road segment、総延長約15.4 kmを実装
+- Town coreとBob / 主人公宅 / Jim / Public Works / forest roadを数百m〜km単位で分散
+- 260本相当の遠景treeをMultiMesh化
+- 全road segmentから最寄りcenterlineを探す復帰方式へ変更
+- 1km以上離れたforest roadでvehicle physicsが安定することをnative QA
+
+### Season 1 vertical slice
+- 新正史第1話「走れば車だ」を実装開始
+- Bob中古車店から試運転→horn確認→店へ戻る→主人公宅までのdrive flow
+- precision parking markerを廃止し、broad event zoneへ変更
+- drive到達stageをStoryDirectorへ追加
+- BobのBlender prototypeを中古車店へ配置
+- Bob / 主人公のBlender-rendered portraitをdialogue UIへ接続
+- 旧24話は移行placeholderとして残し、段階的にSeason 1へ置換
+
+### Release
+- v0.9.0以降の方針どおり、GitHub上ではPre-releaseではなく通常Releaseとして配布
+- v0.9.1はマップ規模・遠距離physics・Season 1開始部のAndroid実機確認を主目的とするtest build
+
 ## 0.9.0 - 2026-09-25
 
 ### Repository cleanup

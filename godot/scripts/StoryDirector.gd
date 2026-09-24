@@ -17,13 +17,25 @@ var rng := RandomNumberGenerator.new()
 
 var episodes := [
     {
-        "title":"プロローグ　BBQ小盛り非常事態",
-        "summary":"この町の『小盛り』が本当に小さいのか確認する。",
+        "title":"Season 1 第1話　走れば車だ",
+        "summary":"ボブからPine Creek最初のボロい4WDを買って試運転する。",
         "stages":[
-            {"pos":Vector3(-13,0,18),"mode":"action","objective":"BOB'S USED CARSで『小盛り』の意味を聞く",
-             "speaker":"ボブ","line":"小盛り？　この町でその単語を使うと保安官が来るぞ。たぶん。"},
-            {"pos":Vector3(-13,0,-21),"mode":"action","objective":"PINE CREEK FAMILY BBQへ向かう",
-             "speaker":"店員","line":"これが小盛り。皿から落ちてる分はカロリーに入らない。"}
+            {"pos":PineWorldLayout.BOB_EVENT,"mode":"action","radius":13.0,
+             "objective":"BOB'S USED CARSでボブと中古ピックアップを見る",
+             "speaker":"ボブ","line":"普通に走ればいい？　だったら全部だ。まずこれを乗ってみろ。"},
+            {"pos":PineWorldLayout.TEST_ROUTE_A,"mode":"drive","radius":22.0,
+             "objective":"試運転：西側の田舎道を分岐まで走る",
+             "speaker":"ボブ","line":"エンジンは掛かってる。ハンドルも付いてる。今のところ満点だ。"},
+            {"pos":PineWorldLayout.TEST_ROUTE_B,"mode":"horn","required":1,"radius":22.0,
+             "objective":"試運転：分岐で警笛を1回鳴らしてホーンを確認する",
+             "horn_feedback_speaker":"ボブ","horn_success_line":"ホーンも生きてる。鹿とジムにはそれで十分だ。",
+             "speaker":"ボブ","line":"よし。止まるし曲がるし鳴る。車だ。"},
+            {"pos":PineWorldLayout.BOB_EVENT,"mode":"drive","radius":20.0,
+             "objective":"BOB'S USED CARSへ戻る",
+             "speaker":"ボブ","line":"どうだ？　走っただろ。つまり問題ない。"},
+            {"pos":PineWorldLayout.HOME_EVENT,"mode":"drive","radius":24.0,
+             "objective":"購入したピックアップで新居まで帰る",
+             "speaker":"主人公","line":"……日本にいた時は、車を買うってもう少し確認事項があった気がする。"}
         ]
     },
     {
@@ -308,7 +320,13 @@ func _process(delta: float) -> void:
     var pos := get_current_target_position()
     marker_changed.emit(pos, true)
 
-    if stage.get("mode","action") == "timed":
+    var mode: String = str(stage.get("mode","action"))
+    if mode == "drive":
+        if _near_target():
+            _complete_stage()
+        return
+
+    if mode == "timed":
         stage_timer -= delta
         var shown_second := maxi(0, int(ceil(stage_timer)))
         if shown_second != _last_timer_second:
@@ -346,11 +364,13 @@ func on_horn() -> void:
         return
     horn_count += 1
     var required: int = int(stage.get("required",1))
+    var feedback_speaker := str(stage.get("horn_feedback_speaker","ケビン"))
     if horn_count < required:
         objective_changed.emit(_episode()["title"], stage["objective"] + "　(%d/%d)" % [horn_count,required])
-        dialogue_requested.emit("ケビン","ゴボゴボ……。")
+        dialogue_requested.emit(feedback_speaker,str(stage.get("horn_feedback_line","ゴボゴボ……。遭遇判定は続行。")))
     else:
-        dialogue_requested.emit("ケビン","ゴボッ！　……交渉成立らしい。")
+        if stage.has("horn_success_line"):
+            dialogue_requested.emit(feedback_speaker,str(stage["horn_success_line"]))
         _complete_stage()
 
 func _can_interact() -> bool:
@@ -366,10 +386,6 @@ func get_current_target_position() -> Vector3:
     if stage.is_empty():
         return Vector3.ZERO
     var p: Vector3 = stage["pos"]
-    # Story data points at the building itself. Gameplay targets are roadside
-    # parking bays, so the player never has to push against a collision wall.
-    if absf(p.x) >= 10.0:
-        p.x = signf(p.x) * 6.25
     p.y = 0.085
     return p
 
@@ -381,7 +397,7 @@ func _near_target() -> bool:
         return false
     var p := get_current_target_position()
     var delta := Vector2(vehicle.global_position.x - p.x, vehicle.global_position.z - p.z)
-    return delta.length() <= 4.5
+    return delta.length() <= float(stage.get("radius",10.0))
 
 func _complete_stage() -> void:
     var stage := _stage()

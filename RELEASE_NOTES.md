@@ -1,85 +1,96 @@
-# Pine Creek v0.9.0 — 車両基盤安定版 / 正式リリース運用開始
+# Pine Creek v0.9.1 — 田舎マップ / Season 1 テスト版
 
-Pine CreekはこのバージョンからGitHub上の配布をPre-releaseではなく通常Releaseへ切り替えます。
+v0.9.1は、車両基盤が安定したv0.9.0の次の段階として、**広い田舎マップと新Season 1を実際のゲームへ入れ始めたテストビルド**です。
 
-ただし、これは「ゲーム内容が完成した」という意味ではありません。今回の節目は、車両挙動・操作・スポーン・復帰・音響・フリー走行・メニュー操作など、今後の大規模制作を支える基盤がかなり安定したためです。
+GitHub上ではv0.9.0からの方針どおり、Pre-releaseではなく通常Releaseとして公開します。ただし内容面はまだ開発途中で、今回の建物・道路景観・人物の多くはgrayboxまたは試作モデルです。
 
-**ストーリー、3Dモデル、町のマップ、NPC表現、イベント演出はまだ仮置き・未完成です。**
-今後はこれらを本格的に作り込み、Pine Creekをもっとストーリーが濃く、もっと住民が見え、もっと町が広く、そしてもっと狂ったゲームへ進化させます。
+## 広いPine Creek graybox
 
-## 今回の細かい修正
+- 約4.5 km × 4.5 kmの走行可能範囲
+- 23本のmodular road segment
+- 道路総延長 約15.4 km
+- 小さなtown coreと、数百m〜km離れた田舎landmark
+- Bob's Used Cars / 主人公宅 / Jim's Garage / Public Works
+- Gas & Coffee / General / Tools / 3つのTown Hall
+- 住宅cluster / forest road / snowfield
+- 260本相当の遠景treeをMultiMesh化
 
-バック中にステアリングを切ったとき、旧式の `snow_skid.wav` レイヤーが鳴ることがありました。
+建物を密集させず、町の外へ出ると「何もない雪道」が長く続く田舎らしい距離感を優先しています。
 
-これは「横速度が出たらスキッド音」という古い判定が残っていて、後退旋回でも自然に発生する横速度を横滑りと誤認していたためです。
+## 復帰処理
 
-v0.9.0では以下へ変更しました。
+以前は小さい旧マップの2本の道路だけを前提にしていました。v0.9.1では全road segmentから最寄りのcenterlineを計算し、広いマップのどこで復帰しても近い道路へ戻す方式へ変更しています。
 
-- バック中はsnow-skidを完全ミュート
-- snow-skidは前進中、約12.6km/h以上、かつ大きな横滑りがある場合だけ有効
-- skidのpitchは1.0固定
-- 音量も-38〜-18dBへ抑え、通常走行の前景には出さない
-- 通常のバック旋回では圧雪ロードテクスチャとV8エンジンだけが聞こえる構成
+## Season 1開始
 
-## v0.8.xで固めた車両基盤
+新正史の最初のvertical sliceとして、**Season 1 第1話「走れば車だ」**を実装開始しました。
 
-- 車両を上から落とさず、道路上の静止姿勢へ直接スポーン
-- freeze中にサスペンションforceを蓄積しない
-- 最初の運転入力までphysics lockを維持
-- V8風エンジンサウンド
-- 9秒の非音階・低音量圧雪ロードテクスチャ
-- Androidで安定する48kHz / 16-bit PCM音声
-- タイトル用ヘヴィメタルテーマ
-- タイトル / 走行BGM切替
-- 道路外からの復帰
-- フリー走行モード
-- ストーリー選択中の運転入力停止とスクロール改善
-- タイトル画面で車両音を鳴らさない制御
+流れ:
 
-## まだ未完成のもの
+- BOB'S USED CARSでBobとボロい4WDを見る
+- 西側の田舎道へ試運転
+- hornが動くか確認
+- Bobの店へ戻る
+- 購入したpickupで主人公宅へ帰る
 
-現時点のストーリー、3Dモデル、町のマップ、NPCは最終仕様ではありません。
+StoryDirectorへ「目的地へ入れば自動進行するdrive stage」を追加し、毎回正確な黄色い駐車枠へ停める旧方式から、**広いevent zone**へ変更しています。
 
-特に今後は、
+旧24話は一度に削除せず、Season 1の新episodeへ段階的に置き換えます。
 
-- 24話の断片的な内容を一本につながった「シーズン1」へ再構成
-- 日本から来た主人公と、ボブ、ジム、町長、ケビンを中心にした継続ストーリー
-- ボブの中古車店、主人公宅、ジムのガレージ、BBQ店、役場、公共事業ヤード、住宅地、林道などを含む町の拡張
-- ボロい古いピックアップのモデル強化
-- 中盤で登場する黒い日本のスポーツセダン
-- NPCの3Dモデル、ジェスチャー、会話演出
-- 牽引、捜索、配送、警笛、追跡、吹雪など、駐車以外のミッション
-- 過去エピソードの痕跡が町に残る継続的な世界
-- 事件、追跡、吹雪、BBQ、冬祭りなど場面別BGM
+## Bob / portrait prototype
 
-を作っていきます。
+Blenderで作ったBobの低ポリprototypeを実際に中古車店へ配置しました。
 
-目標は、単なる雪道ドライブではなく、
+会話UIでは、同じBob 3D modelからBlenderでrenderしたtransparent portraitを表示します。主人公portraitも同じpipelineで生成しています。
 
-**「日本から来た比較的まともな主人公が、何もかもおかしいのに住民全員が平然としている雪国の田舎町で、古い車を乗り回しながら毎回理解不能な事件に巻き込まれる3Dドライブ・アメリカンコメディ」**
+つまり今後は「ゲーム内NPC」と「会話の挿絵」が別人にならない方式で制作します。
 
-です。
+## QA
 
-## Repository / CI
+Linux native QAで以下を確認しています。
 
-- 旧Java/OpenGL版をビルドしていたGitHub Actions workflowを削除
-- 今後push時に旧Java CIは起動しない
-- 現行Godot版はLinuxローカルQA → 署名APK build → GitHub Releaseのみ
-- `app/`、root Gradle設定、旧Java SelfTestは開発履歴としてarchive保存
-- Java版へ新機能は追加せず、現行開発は `godot/` のみ
+- rural graybox生成
+- 15 km以上のroad layout
+- MultiMesh forest
+- Bob NPC配置
+- broad event zone
+- Bob portrait dialogue
+- Season 1 Episode 1のaction / drive / horn progression
+- 1 km以上world originから離れたforest roadでvehicle physicsが安定
+- 新road networkでの最寄り道路復帰
+- 従来のspawn / steering / reverse / audio / pause / touch controls回帰
 
-## Release channel
+`GODOT_TESTS=PASS`
 
-- v0.8.x: 開発Pre-release履歴
-- **v0.9.0以降: 通常GitHub Release**
-- 過去のPre-releaseは履歴として残します
-- 通常Release化後も内容面の大型アップデートは継続します
+`VISUAL_QA=PASS`
+
+`QA_NATIVE=PASS`
+
+Android release buildも署名・package・SDK・version検証まで行います。
+
+Linux VMは実音声出力がdummy driverになるため、**可聴音とAndroid実機での広いマップの体感/性能は端末で確認してください。**
+
+## 未完成 / 仮置き
+
+このReleaseで完成していないもの:
+
+- Season 1第2話以降の新gameplay
+- tow / cargo / NPC followなどSeason 1専用system
+- Jim / Mayor / Kevinの最終3D model
+- 建物のfinal model
+- road decoration / snowbanks / rural propsの本仕上げ
+- 黒い日本のsedan
+- 最終的なNPC animation
+- story dialogueの本仕上げ
+- map cell streaming / full LOD tuning
+
+ここからストーリー、NPC、モデル、町の履歴を順番に追加し、Pine Creekを**もっとストーリーが濃く、もっと田舎で、もっと狂ったゲーム**へ進化させます。
 
 ## Android
 
 - package: `com.pinecreek.game.godot`
-- versionCode: `21`
-- version: `0.9.0`
+- versionCode: `22`
+- version: `0.9.1`
 - min SDK: 24
 - target SDK: 36
 

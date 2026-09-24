@@ -46,6 +46,15 @@ func _run() -> void:
     var car: PineVehicle = main.vehicle
     var chase: PineChaseCamera = main.chase
 
+    _check(main.get_node_or_null("RuralSnowGround") != null,
+        "rural graybox builds the 4.5 km snow field")
+    _check(main.get_node_or_null("RuralTreeCrowns") is MultiMeshInstance3D,
+        "rural forest uses MultiMesh instead of hundreds of tree nodes")
+    _check(PineWorldLayout.total_road_length_m() > 15000.0,
+        "rural graybox exposes more than 15 km of modular roads")
+    _check(main.get_node_or_null("BOB") != null,
+        "Bob prototype is placed at the used-car lot")
+
     # Story selection is a real menu: gameplay input must be completely disabled
     # so touch drags belong to ScrollContainer instead of steering/camera.
     main._show_story_select()
@@ -137,16 +146,39 @@ func _run() -> void:
 
     var out := "/home/festice/ChatGPT-dev/PineCreekGame/godot/build"
 
-    # Destination marker must be a roadside parking bay, not the building center.
+    # Season 1 destinations are broad event zones rather than precision parking.
     var first_target: Vector3 = main.story.get_current_target_position()
-    _check(absf(first_target.x + 6.25) < 0.01 and absf(first_target.z - 18.0) < 0.01,
-        "first mission target is on the roadside parking bay")
-    _check(main.mission_marker.get_child_count() >= 6,
-        "mission marker contains a visible parking rectangle and pointer")
-    main._teleport_vehicle(Transform3D(Basis.IDENTITY, Vector3(0,0.62,18)))
+    _check(first_target.distance_to(PineWorldLayout.BOB_EVENT) < 0.2,
+        "first Season 1 mission begins beside Bob's Used Cars")
+    _check(main.mission_marker.get_node_or_null("EventZoneFill") != null and
+        main.mission_marker.get_node_or_null("EventZonePointer") != null,
+        "mission marker contains a broad event area and pointer")
+    main._teleport_vehicle(PineWorldLayout.start_transform())
     for i in range(12):
         await physics_frame
-    await _capture(out + "/qa-mission-parking.png")
+    await _capture(out + "/qa-rural-bob-event-zone.png")
+    main.story.on_action()
+    _check(main.story.stage_index == 1 and main.dialogue_portrait.visible and
+        main.dialogue_portrait.texture != null,
+        "Episode 1 starts Bob dialogue with the Blender-rendered portrait")
+    await _capture(out + "/qa-season1-bob-dialogue.png")
+
+    # Prove the pickup remains numerically/physically usable far from world origin.
+    var far_road := PineWorldLayout.nearest_road_transform(PineWorldLayout.DEEP_SNOW_SITE)
+    main._teleport_vehicle(far_road)
+    main.set_physics_process(false)
+    var far_start := car.global_position
+    car.set_controls(0.0,1.0,0.0,0.0)
+    for i in range(150):
+        await physics_frame
+    var far_distance := Vector2(car.global_position.x-far_start.x,
+        car.global_position.z-far_start.z).length()
+    _check(far_distance > 2.0 and car.get_speed_kmh() > 10.0 and
+        car.global_position.y > 0.30 and car.global_position.y < 1.2,
+        "vehicle physics stays stable on the forest road more than 1 km from origin")
+    await _capture(out + "/qa-rural-forest-road.png")
+    car.set_controls(0.0,0.0,1.0,0.0)
+    main.set_physics_process(true)
 
     # The touch reset signal must always rescue to the nearest road centerline.
     car.freeze = true
@@ -173,22 +205,25 @@ func _run() -> void:
         "actual touch on reset returns a vehicle from snow to the road")
 
     car.freeze = true
-    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(20,0.62,-30))
+    car.global_transform = Transform3D(Basis.IDENTITY, Vector3(200,0.62,30))
     car.freeze = false
     main._reset_vehicle_to_road()
     for i in range(4):
         await physics_frame
-    _check(absf(car.global_position.z + 24.0) < 0.25 and absf(car.global_position.x - 20.0) < 0.25,
-        "rescue chooses the cross road when it is nearer")
+    _check(absf(car.global_position.z) < 0.30 and absf(car.global_position.x - 200.0) < 0.35,
+        "rescue chooses the long town crossroad when it is nearer")
 
     car.freeze = true
     car.global_transform = Transform3D(Basis.IDENTITY, Vector3(8,-5.0,10))
     car.freeze = false
+    var expected_fall_rescue := PineWorldLayout.nearest_road_transform(car.global_position)
     main._physics_process(0.016)
     for i in range(4):
         await physics_frame
-    _check(car.global_position.y > 0.35 and absf(car.global_position.x) < 0.15,
-        "falling below the world automatically rescues to a road")
+    var fall_error := Vector2(car.global_position.x-expected_fall_rescue.origin.x,
+        car.global_position.z-expected_fall_rescue.origin.z).length()
+    _check(car.global_position.y > 0.35 and fall_error < 0.40,
+        "falling below the world automatically rescues to the nearest modular road")
 
     main.set_physics_process(false)
 

@@ -132,6 +132,16 @@ func _run() -> void:
         await physics_frame
     check(car.global_position.x < -0.03, "left wheel angle produces the expected opposite yaw/path while reversing")
 
+    # Rural world layout regression.
+    check(PineWorldLayout.MAP_HALF_SIZE >= 2200.0,
+        "rural graybox spans roughly 4.5 km across")
+    check(PineWorldLayout.total_road_length_m() > 15000.0,
+        "rural graybox contains more than 15 km of drivable road segments")
+    var bob_start := PineWorldLayout.start_transform()
+    check(Vector2(bob_start.origin.x-PineWorldLayout.BOB_EVENT.x,
+        bob_start.origin.z-PineWorldLayout.BOB_EVENT.z).length() < 1.0,
+        "story/free-drive spawn begins on the road beside Bob's Used Cars")
+
     # Timed-story regression: timeout restarts, arrival advances.
     var story := PineStoryDirector.new()
     story.attach_vehicle(car)
@@ -142,27 +152,43 @@ func _run() -> void:
     story.stage_timer = 0.01
     story.set_process(false)
     var timed_target := story.get_current_target_position()
-    check(absf(timed_target.x - 6.25) < 0.01 and absf(timed_target.z - 49.0) < 0.01,
-        "building mission target is converted to a roadside parking bay")
+    check(absf(timed_target.x - 12.0) < 0.01 and absf(timed_target.z - 49.0) < 0.01,
+        "legacy timed mission still exposes its authored event position")
     car.freeze = true
     car.global_position = Vector3.ZERO
     story._process(0.05)
     check(story.stage_index == 1 and story.stage_timer > 40.0,
         "timed mission restarts after timeout")
 
-    car.global_position = Vector3(6.25,0.62,49)
+    car.global_position = Vector3(12.0,0.62,49)
     story.stage_timer = 20.0
     story._process(0.01)
     check(story.episode_index == 9 and story.stage_index == 0,
         "reaching timed destination advances to next episode")
     check(story.episodes.size() >= 24, "campaign contains at least 24 crazy town episodes")
 
+    # Season 1 episode 1 is the first migrated vertical slice.
     story.start_campaign(0)
+    check(story.get_episode_title(0).contains("走れば車だ"),
+        "Season 1 begins with Bob's 'If it runs, it's a car' episode")
     var action_target := story.get_current_target_position()
+    check(action_target.distance_to(PineWorldLayout.BOB_EVENT) < 0.2,
+        "Season 1 episode 1 starts at Bob's rural event zone")
     car.global_position = Vector3(action_target.x,0.62,action_target.z)
     story.on_action()
     check(story.episode_index == 0 and story.stage_index == 1,
-        "action inside the roadside parking bay advances the mission")
+        "action inside the broad Bob event zone advances the mission")
+
+    var drive_target := story.get_current_target_position()
+    car.global_position = Vector3(drive_target.x + 10.0,0.62,drive_target.z)
+    story._process(0.016)
+    check(story.stage_index == 2,
+        "drive-mode stage auto-advances inside its broad event radius")
+    var horn_target := story.get_current_target_position()
+    car.global_position = Vector3(horn_target.x,0.62,horn_target.z)
+    story.on_horn()
+    check(story.stage_index == 3,
+        "Season 1 test-drive horn check advances without precision parking")
 
     story.start_campaign(12)
     check(story.episode_index == 12 and story.stage_index == 0, "story selector can start an arbitrary episode")
