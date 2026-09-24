@@ -115,45 +115,60 @@ for i in range(int(duration*RATE)):
     samples.append(exhaust*0.30 + mechanical)
 write_mono("engine_idle.wav", samples)
 
-# Packed-snow tyre loop: low rolling body plus discrete compressed-snow crunches.
-# No continuous white-noise bed; all high-frequency content exists in short grains.
+# Packed-snow tyre loop: non-tonal low tyre rumble plus short snow-crunch grains.
+# Speed changes volume only in VehicleAudio.gd; this file is never pitch-shifted.
 duration = 6.0
 count = int(duration * RATE)
 samples = [0.0] * count
 
-# Seamless low tyre/body rumble. All frequencies complete an integer number of
-# cycles in the six-second loop.
+# Broad low-frequency tyre/body rumble. Filtered deterministic noise avoids the
+# musical sine-tone effect of the previous version while keeping hiss out of the
+# upper spectrum.
+local_rng = random.Random(32570)
+lp_fast = 0.0
+lp_slow = 0.0
 for i in range(count):
+    raw = local_rng.random() * 2.0 - 1.0
+    lp_fast += 0.014 * (raw - lp_fast)
+    lp_slow += 0.0028 * (raw - lp_slow)
+    rumble = (lp_fast - lp_slow * 0.72) * 0.12
     t = i / RATE
-    weight = (
-        0.036 * math.sin(2*math.pi*42.0*t)
-        + 0.025 * math.sin(2*math.pi*67.0*t + 0.4)
-        + 0.014 * math.sin(2*math.pi*93.0*t + 1.1)
-    )
-    texture = 0.80 + 0.12*math.sin(2*math.pi*0.5*t) + 0.08*math.sin(2*math.pi*(5.0/6.0)*t + 0.7)
-    lug = max(0.0, math.sin(2*math.pi*2.0*t + 0.2))**10 * 0.012
-    samples[i] = weight * texture + lug
+    # Slow load variation only changes loudness, not pitch.
+    load = 0.82 + 0.10*math.sin(2*math.pi*(2.0/6.0)*t + 0.6) + 0.06*math.sin(2*math.pi*(3.0/6.0)*t + 1.7)
+    samples[i] = rumble * load
 
-# Crunch events approximate compacted snow breaking under tread blocks. Instead
-# of broadband hiss they use short clusters of inharmonic resonances. Circular
-# indexing keeps grains near the boundary seamless.
-centers = [0.18,0.64,1.11,1.73,2.29,2.94,3.37,4.03,4.58,5.17,5.72]
+# Discrete compressed-snow crunches. Each event is a short band-limited noise
+# burst rather than a resonant sine cluster, so acceleration cannot sound like
+# a rising musical scale.
+centers = [0.22,0.61,1.08,1.48,1.96,2.41,2.87,3.31,3.78,4.16,4.63,5.07,5.53]
 for gi, center in enumerate(centers):
-    width = 0.040 + (gi % 4) * 0.008
-    amp = 0.040 + (gi % 3) * 0.008
-    freqs = [310 + gi*17, 540 + gi*23, 870 + gi*29, 1370 + gi*31]
-    phases = [0.2*gi, 0.7+0.11*gi, 1.5+0.07*gi, 2.2+0.13*gi]
+    width = 0.030 + (gi % 4) * 0.010
+    amp = 0.060 + (gi % 3) * 0.010
     radius = int(width * RATE)
     center_i = int(center * RATE)
-    for o in range(-radius, radius + 1):
+    grain_rng = random.Random(0x5100 + gi * 997)
+    lp1 = 0.0
+    lp2 = 0.0
+    grain_values = []
+    for j in range(radius * 2 + 1):
+        raw = grain_rng.random() * 2.0 - 1.0
+        lp1 += 0.22 * (raw - lp1)
+        lp2 += 0.055 * (raw - lp2)
+        grain_values.append((lp1 - lp2) * 0.92 + lp2 * 0.28)
+    for j, o in enumerate(range(-radius, radius + 1)):
         x = o / max(1, radius)
         window = (1.0 - x*x) ** 2
-        idx = (center_i + o) % count
-        tt = o / RATE
-        grain = 0.0
-        for f, ph in zip(freqs, phases):
-            grain += math.sin(2*math.pi*f*tt + ph)
-        samples[idx] += grain * (amp / len(freqs)) * window
+        idx = center_i + o
+        if 0 <= idx < count:
+            samples[idx] += grain_values[j] * amp * window
+
+# Tiny zero seam prevents a loop click; at six seconds it is not perceived as a
+# rhythmic gap.
+seam = int(0.012 * RATE)
+for i in range(seam):
+    a = i / max(1, seam - 1)
+    samples[i] *= a
+    samples[-1-i] *= a
 
 write_mono("snow_roll.wav", samples)
 

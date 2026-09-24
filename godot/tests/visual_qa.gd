@@ -63,13 +63,15 @@ func _run() -> void:
         "title screen uses the hard-rock theme")
 
     # Free drive is a first-class mode: no campaign, no marker, no Action button.
+    # Spawn is no longer simulated as a fall/settle at all: it is placed at the
+    # road-rest height and remains frozen until the first driving input.
     main._start_free_drive()
-    _check(not car.visible, "free-drive spawn remains hidden while physics settles")
-    for i in range(190):
-        await physics_frame
-        if main.game_started:
-            break
-    _check(main.is_free_drive() and car.visible, "free drive starts after hidden stabilization")
+    await process_frame
+    await process_frame
+    _check(main.is_free_drive() and car.visible, "free drive starts from a pre-positioned road pose")
+    _check(main._spawn_lock and car.freeze, "free-drive spawn stays physics-locked before first input")
+    _check(absf(car.global_position.y - main.ROAD_RESCUE_Y) < 0.015,
+        "free-drive spawn is placed directly at the road-rest height")
     _check(not main.story.started and not main.mission_marker.visible,
         "free drive has no campaign or mission marker")
     _check(main.touch.gameplay_enabled and not (main.touch._buttons["action"] as Button).visible,
@@ -77,34 +79,48 @@ func _run() -> void:
     _check(main.vehicle_audio.driving_enabled and main.vehicle_audio.engine.playing,
         "free drive enables vehicle audio only after gameplay begins")
     var free_spawn_y := car.global_position.y
-    for i in range(18):
+    for i in range(30):
+        await physics_frame
+    _check(absf(car.global_position.y - free_spawn_y) < 0.001,
+        "locked free-drive spawn cannot fall while the player is idle")
+    main.touch.debug_touch_press(71, "throttle")
+    await physics_frame
+    main.touch.debug_touch_release(71)
+    _check(not main._spawn_lock and not car.freeze, "first driving input releases the spawn lock")
+    for i in range(12):
         await physics_frame
     _check(absf(car.global_position.y - free_spawn_y) < 0.08,
-        "free-drive visible spawn has no falling phase")
+        "releasing physics at road-rest height does not create a visible drop")
     main._pause_to_title()
     _check(main.title_layer.visible and not main.game_started and not main.touch.gameplay_enabled,
         "leaving free drive returns to a non-driving title menu")
     _check(not main.vehicle_audio.driving_enabled and not main.vehicle_audio.engine.playing,
         "returning to title stops engine and tyre audio")
 
-    # Story start uses the same stabilized spawn. Calling start twice must not
-    # launch competing async spawn sequences.
+    # Story start uses the same direct road placement. Calling start twice must
+    # not launch competing async start sequences.
     main._start_game()
     main._start_game()
     _check(main._starting_game, "duplicate start is guarded by one start sequence")
-    _check(not car.visible, "story vehicle stays hidden while start physics stabilizes")
-    var visible_y_min := INF
-    var visible_y_max := -INF
-    for i in range(190):
+    await process_frame
+    await process_frame
+    _check(main.game_started and car.visible, "story vehicle appears at the prepared road pose")
+    _check(main._spawn_lock and car.freeze, "story spawn remains locked until driving input")
+    _check(absf(car.global_position.y - main.ROAD_RESCUE_Y) < 0.015,
+        "story spawn is placed directly at road-rest height")
+    var story_spawn_y := car.global_position.y
+    for i in range(30):
         await physics_frame
-        if car.visible:
-            visible_y_min = minf(visible_y_min, car.global_position.y)
-            visible_y_max = maxf(visible_y_max, car.global_position.y)
-        if main.game_started and i > 20:
-            break
-    _check(main.game_started and car.visible, "vehicle becomes visible only after stabilization")
-    _check(visible_y_max - visible_y_min < 0.09,
-        "visible story spawn never contains a sky-drop frame")
+    _check(absf(car.global_position.y - story_spawn_y) < 0.001,
+        "idle story spawn cannot fall because physics is still locked")
+    main.touch.debug_touch_press(72, "throttle")
+    await physics_frame
+    main.touch.debug_touch_release(72)
+    _check(not main._spawn_lock and not car.freeze, "story spawn unlocks on first driving input")
+    for i in range(12):
+        await physics_frame
+    _check(absf(car.global_position.y - story_spawn_y) < 0.08,
+        "first story movement starts without a vertical drop")
     _check(main.game_audio.current_music_path.ends_with("pine_creek_radio.wav"),
         "gameplay switches to the driving radio track")
     _check(main.story.started and (main.touch._buttons["action"] as Button).visible,

@@ -1,10 +1,7 @@
 extends Node3D
 
-const ROAD_RESCUE_Y := 0.62
+const ROAD_RESCUE_Y := 0.60
 const START_POINT := Vector3(0.0, ROAD_RESCUE_Y, 22.0)
-const START_STABILIZE_FRAMES := 42
-const START_STABLE_REQUIRED_FRAMES := 10
-const START_STABILIZE_MAX_FRAMES := 150
 
 enum PlayMode { MENU, STORY, FREE }
 
@@ -28,6 +25,7 @@ var game_started := false
 var game_paused := false
 var play_mode := PlayMode.MENU
 var _starting_game := false
+var _spawn_lock := false
 var selected_episode := 0
 var _reset_key_was_down := false
 var _horn_key_was_down := false
@@ -716,7 +714,7 @@ func _build_title() -> void:
     panel.add_child(select)
 
     var note := Label.new()
-    note.text = "v0.8.6 alpha  •  フリー走行 / メニュー入力修正 / スポーン強化"
+    note.text = "v0.8.7 alpha  •  スポーン力蓄積修正 / 圧雪ピッチ固定"
     note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     note.add_theme_font_size_override("font_size",17)
@@ -951,10 +949,11 @@ func _sync_camera_to_vehicle() -> void:
     var forward := vehicle.global_transform.basis.z.normalized()
     chase.global_position = vehicle.global_position - forward * 6.6 + Vector3.UP * 2.55
 
-func _stabilize_vehicle_for_start() -> void:
-    # Android occasionally rendered one physics/interpolation frame from the
-    # pre-settle chassis position. Settle fully while hidden, then refreeze the
-    # already-resting transform for a rendered frame before physics is released.
+func _prepare_vehicle_for_start() -> void:
+    # Do not "drop and settle" the pickup at all. On this flat packed-snow road,
+    # y=0.60 is the suspension equilibrium height. Place the body there already
+    # frozen, sync interpolation/camera, and keep it frozen until the player
+    # gives the first driving input.
     vehicle.visible = false
     vehicle.freeze = true
     vehicle.sleeping = true
@@ -966,36 +965,13 @@ func _stabilize_vehicle_for_start() -> void:
     vehicle.last_safe_transform = vehicle.global_transform
     vehicle._safe_timer = 0.0
     vehicle.reset_physics_interpolation()
-    vehicle.sleeping = false
-    vehicle.freeze = false
-
-    var stable_frames := 0
-    for i in range(START_STABILIZE_MAX_FRAMES):
-        await get_tree().physics_frame
-        var settled := (
-            absf(vehicle.linear_velocity.y) < 0.035
-            and vehicle.linear_velocity.length() < 0.14
-            and absf(vehicle.global_position.y - ROAD_RESCUE_Y) < 0.24
-        )
-        stable_frames = stable_frames + 1 if settled else 0
-        if i >= START_STABILIZE_FRAMES and stable_frames >= START_STABLE_REQUIRED_FRAMES:
-            break
-
-    vehicle.freeze = true
-    vehicle.sleeping = true
-    vehicle.linear_velocity = Vector3.ZERO
-    vehicle.angular_velocity = Vector3.ZERO
-    vehicle.last_safe_transform = vehicle.global_transform
-    vehicle._safe_timer = 0.0
-    vehicle.reset_physics_interpolation()
     _sync_camera_to_vehicle()
+    _spawn_lock = true
 
-    # Render the settled, frozen pose once. Only then let the rigid body move.
+    # Present the exact road-rest pose behind the still-visible menu for one
+    # rendered frame. No gravity/suspension simulation has happened yet.
     vehicle.visible = true
     await get_tree().process_frame
-    await get_tree().physics_frame
-    vehicle.sleeping = false
-    vehicle.freeze = false
 
 func _start_selected_episode(index: int) -> void:
     await _begin_drive(PlayMode.STORY, index)
@@ -1032,7 +1008,7 @@ func _begin_drive(mode: int, episode_index: int) -> void:
     if mission_marker != null:
         mission_marker.visible = false
 
-    await _stabilize_vehicle_for_start()
+    await _prepare_vehicle_for_start()
 
     game_started = true
     vehicle_audio.set_driving_enabled(true)
@@ -1089,6 +1065,7 @@ func _leave_game_to_menu() -> void:
     game_started = false
     play_mode = PlayMode.MENU
     _starting_game = false
+    _spawn_lock = false
     vehicle.freeze = true
     vehicle.set_controls(0.0,0.0,1.0,0.0)
     if vehicle_audio != null:
@@ -1135,11 +1112,30 @@ func _physics_process(_delta: float) -> void:
     var keyboard_reverse := 1.0 if (Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) else 0.0
     var keyboard_brake := 1.0 if Input.is_key_pressed(KEY_SPACE) else 0.0
 
+    var combined_steer: float = clampf(touch.steer + keyboard_steer, -1.0, 1.0)
+    var combined_throttle: float = maxf(touch.throttle, keyboard_throttle)
+    var combined_brake: float = maxf(touch.brake, keyboard_brake)
+    var combined_reverse: float = maxf(touch.reverse, keyboard_reverse)
+
+    if _spawn_lock:
+        var drive_intent: bool = absf(combined_steer) > 0.01 or combined_throttle > 0.01 or combined_reverse > 0.01
+        if drive_intent:
+            _spawn_lock = false
+            vehicle.sleeping = false
+            vehicle.freeze = false
+            vehicle.reset_physics_interpolation()
+        else:
+            # Stay planted at the exact road-rest pose until the player actually
+            # asks the truck to move. There is no startup gravity drop anymore.
+            vehicle.freeze = true
+            vehicle.linear_velocity = Vector3.ZERO
+            vehicle.angular_velocity = Vector3.ZERO
+
     vehicle.set_controls(
-        clamp(touch.steer + keyboard_steer, -1.0, 1.0),
-        max(touch.throttle, keyboard_throttle),
-        max(touch.brake, keyboard_brake),
-        max(touch.reverse, keyboard_reverse)
+        combined_steer,
+        combined_throttle,
+        combined_brake,
+        combined_reverse
     )
 
     var reset_down := Input.is_key_pressed(KEY_R)

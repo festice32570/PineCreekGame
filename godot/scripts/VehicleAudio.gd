@@ -69,7 +69,9 @@ func _process(delta: float) -> void:
     engine.volume_db = lerpf(-11.0, -3.5, clampf(0.18 + throttle * 0.72 + speed / 70.0, 0.0, 1.0))
 
     var road_amount := clampf(speed / 20.0, 0.0, 1.0)
-    snow.pitch_scale = lerpf(0.76, 1.18, road_amount)
+    # Never pitch-shift the snow bed with speed. The old mapping turned the
+    # granular texture into an obvious rising musical note while accelerating.
+    snow.pitch_scale = 1.0
     if speed < 0.45:
         snow.volume_db = -80.0
     else:

@@ -94,6 +94,12 @@ func get_forward_speed_kmh() -> float:
     return linear_velocity.dot(global_transform.basis.z.normalized()) * 3.6
 
 func _physics_process(delta: float) -> void:
+    # Menus/spawn use RigidBody freeze. Never apply suspension/tyre forces while
+    # frozen: Godot can carry queued forces into the first unfrozen step, which
+    # previously launched the pickup upward before it fell back to the road.
+    if freeze:
+        return
+
     var up: Vector3 = global_transform.basis.y.normalized()
     var body_forward: Vector3 = global_transform.basis.z.normalized()
     var body_speed: float = linear_velocity.dot(body_forward)

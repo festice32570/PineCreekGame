@@ -234,6 +234,8 @@ func _run() -> void:
     runtime_vehicle_audio._process(0.016)
     check(runtime_vehicle_audio.snow.volume_db > -25.0 and runtime_vehicle_audio.snow.playing,
         "packed-snow tyre texture becomes audible at normal driving speed")
+    check(absf(runtime_vehicle_audio.snow.pitch_scale - 1.0) < 0.001,
+        "packed-snow texture never pitch-shifts into a rising musical tone")
     car.linear_velocity = Vector3.ZERO
     await create_timer(0.25).timeout
     check(runtime_vehicle_audio.engine.playing and runtime_vehicle_audio.engine.get_playback_position() > 0.05,
