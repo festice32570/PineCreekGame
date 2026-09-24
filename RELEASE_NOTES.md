@@ -27,6 +27,20 @@ v0.8.3-alpha1で音声の連続再生が安定したため、今回は「ちゃ�
 
 PineGameAudio はBGMコンテキストを切り替えられる形にしたため、ストーリー刷新時には通常走行、事件、吹雪、追跡、冬祭りなどで別BGMを追加できます。
 
+## Bonus Soundtrack
+
+ゲーム本体とは別に、約3分のフル版メインテーマをRelease Assetとして追加しました。
+
+**PINE CREEK — IF IT RUNS, IT'S A CAR**
+
+- 3:00 / 150 BPM
+- オリジナル・ヘヴィメタル / ハードロック
+- デスボイス風シャウト入り
+- 48 kHz / 16-bit stereo PCM WAV
+- SHA-256: a171315d38f9954e8c13ec4091cbcba6de18c9273077fffea8e6d8e46f981e6c
+
+このフル版はまず試聴用のおまけとして公開します。ゲーム内タイトルBGMへのループ編集・差し替えは次工程で行います。
+
 ## Android
 
 - package: com.pinecreek.game.godot

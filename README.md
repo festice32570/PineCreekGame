@@ -77,6 +77,20 @@
 - 提供された1254×1254キーアートPNGを再生成・描き直しせず、そのままタイトル素材へ使用
 - 24本の町内エピソード + 任意開始 + 周回後のランダム事件モード
 
+## Bonus Soundtrack — IF IT RUNS, IT'S A CAR
+
+Pine Creekのクレイジーさをそのまま3分のヘヴィメタルにした、**公式おまけメインテーマ**を公開しています。
+
+**PINE CREEK — IF IT RUNS, IT'S A CAR**
+150 BPM / 3:00 / オリジナル・ヘヴィメタル / デスボイス風シャウト入り。
+
+「IF IT RUNS, IT'S A CAR!」「KEVIN'S LOOSE AGAIN!」「CHECK ENGINE? — STILL RUNS! — THEN DRIVE!」など、ゲーム内の狂った町ルールをそのまま歌詞にしています。
+
+🎵 [3分フル版WAVをGitHub Releaseからダウンロード](https://github.com/festice32570/PineCreekGame/releases/download/v0.8.4-alpha1/PineCreek_MainTheme_IfItRunsItsACar.wav)
+
+歌詞・制作方針・SHA-256は [docs/SOUNDTRACK.md](docs/SOUNDTRACK.md) を参照してください。
+フル版を先に完成させ、ゲーム用のループ編集と実装は次工程で行います。
+
 ## 遊ぶだけなら
 
 GitHubの **Releases** から `PineCreek-Godot-v0.8.4-alpha1.apk` を取得してAndroidへインストールしてください。
@@ -121,7 +135,7 @@ cd godot
 ./tools/build_android.sh
 ```
 
-`qa_native.sh` は回帰テストと実描画スクリーンショットQAを実行します。  
+`qa_native.sh` は回帰テストと実描画スクリーンショットQAを実行します。
 `build_android.sh` はテスト → release APK生成 → 署名検証 → package/version/SDK検証 → SHA-256生成まで行います。
 
 ## オープンソースについて
